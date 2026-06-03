@@ -1,0 +1,20 @@
+company: Patronus AI
+role: null
+stage: null
+location: "SF"
+employees: "~50"
+compensation: null
+excitement: null
+company_quality: 3
+recruiter_type: null
+contact: null
+link: "https://patronus.ai"
+last_outreach: null
+notes: >
+  $50M Series B (late 2025). Automated evaluation, hallucination detection, and
+  red-teaming/security testing for LLMs and AI agents. Safety/security angle on
+  AI eval — natural extension of model evaluation interest (Arena adjacency) but
+  with a security/compliance moat. Under-sampled territory: AI safety tooling.
+  Not sure yet: 3/5 quality rating is low; Series B valuation unknown.
+vote: not_sure_yet
+ai_category: "ai tooling layer"

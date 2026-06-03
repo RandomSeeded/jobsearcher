@@ -1,0 +1,20 @@
+company: Mem0
+role: null
+stage: null
+location: "SF"
+employees: "~20"
+compensation: null
+excitement: null
+company_quality: 3
+recruiter_type: null
+contact: null
+link: "https://mem0.ai"
+last_outreach: null
+notes: >
+  $24M total ($3.9M seed + $20M Series A, Oct 2025). Basis Set Ventures lead,
+  Peak XV Partners, Kindred Ventures, YC, GitHub Fund. Angels: Olivier Pomel
+  (Datadog CEO), Lukas Biewald (W&B), Dharmesh Shah. Memory layer /
+  persistence infrastructure for AI agents. YC W24 batch. Small team, early
+  stage.
+vote: null
+ai_category: "ai infrastructure"

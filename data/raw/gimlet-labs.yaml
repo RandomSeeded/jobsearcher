@@ -1,0 +1,19 @@
+company: Gimlet Labs
+role: null
+stage: null
+location: "Unknown"
+employees: "~50"
+compensation: null
+excitement: null
+company_quality: 4
+recruiter_type: null
+contact: null
+link: "https://gimletlabs.ai"
+last_outreach: null
+notes: >
+  $80M Series A. Menlo Ventures lead. Multi-silicon inference cloud — runs AI
+  workloads simultaneously across heterogeneous hardware (solving the inference
+  bottleneck by distributing across GPU/CPU/NPU). Novel infra approach surfaced
+  Mar 2026 on TechCrunch.
+vote: null
+ai_category: "ai infrastructure"

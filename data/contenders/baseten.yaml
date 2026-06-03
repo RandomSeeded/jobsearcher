@@ -1,0 +1,20 @@
+company: Baseten
+role: null
+stage: null
+location: "SF"
+employees: "~100"
+compensation: null
+excitement: null
+company_quality: 5
+recruiter_type: null
+contact: null
+link: "https://baseten.co"
+last_outreach: null
+notes: >
+  $150M Series D at $2.15B valuation (Sept 2025). BOND lead, CapitalG (Google),
+  IVP, Spark, Greylock. Reportedly in talks to raise $1B at $11B valuation.
+  Serverless AI inference platform — deploy and scale ML models, developer-facing.
+  YC alumni. Google strategic backing via CapitalG. Under-sampled infra layer;
+  highest-growth inference platform outside hyperscalers.
+vote: like
+ai_category: "ai infrastructure"

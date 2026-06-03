@@ -1,0 +1,20 @@
+company: Factory
+role: null
+stage: null
+location: "SF"
+employees: "~100"
+compensation: null
+excitement: null
+company_quality: 4
+recruiter_type: null
+contact: null
+link: "https://factory.ai"
+last_outreach: null
+notes: >
+  $150M raised at $1.5B valuation (Apr 2026). Khosla Ventures lead, Sequoia,
+  Insight Partners, Blackstone. Enterprise-focused AI coding agents that
+  automate software development workflows end-to-end. Tier-1 trifecta
+  (Khosla + Sequoia + Insight). AI dev tooling layer match with strong
+  enterprise go-to-market.
+vote: neutral
+ai_category: "ai tooling layer"

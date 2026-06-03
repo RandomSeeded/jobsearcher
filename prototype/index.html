@@ -1,0 +1,1774 @@
+<!DOCTYPE html>
+<!-- PROTOTYPE — throwaway. Question: what should the company browser look like? -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Job Hunt — Company Browser (Prototype)</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+
+  /* ── Switcher ── */
+  #switcher {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: #111; color: #fff; border-radius: 999px;
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 20px; box-shadow: 0 4px 24px rgba(0,0,0,.4);
+    z-index: 9999; user-select: none;
+  }
+  #switcher button { background: none; border: none; color: #fff; font-size: 18px; cursor: pointer; padding: 0 4px; }
+  #switcher button:hover { opacity: .7; }
+  #switcher span { font-size: 13px; font-weight: 600; white-space: nowrap; min-width: 200px; text-align: center; }
+
+  .variant { display: none; }
+  .variant.active { display: flex; }
+
+  /* ══ A — Clean Sidebar ══ */
+  #va { height: 100vh; flex-direction: column; background: #f8f9fa; }
+  .va-header { background: #fff; border-bottom: 1px solid #e5e7eb; padding: 14px 20px; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  .va-header h1 { font-size: 16px; font-weight: 700; color: #111; }
+  .va-filters { display: flex; gap: 6px; margin-left: auto; }
+  .va-filter-btn { font-size: 12px; padding: 4px 10px; border-radius: 999px; border: 1px solid #e5e7eb; background: #fff; cursor: pointer; font-weight: 500; color: #666; transition: all .15s; }
+  .va-filter-btn:hover, .va-filter-btn.sel { background: #111; color: #fff; border-color: #111; }
+  .va-body { display: flex; flex: 1; overflow: hidden; }
+  .va-list { width: 300px; min-width: 300px; overflow-y: auto; border-right: 1px solid #e5e7eb; background: #fff; }
+  .va-item { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid #f0f0f0; cursor: pointer; }
+  .va-item:hover { background: #f8f9fa; }
+  .va-item.sel { background: #eff6ff; border-left: 3px solid #3b82f6; }
+  .va-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .va-item-name { font-size: 14px; font-weight: 600; color: #111; flex: 1; }
+  .va-detail { flex: 1; overflow-y: auto; padding: 32px; }
+  .va-empty { display: flex; align-items: center; justify-content: center; height: 100%; color: #aaa; font-size: 15px; }
+  .va-detail-title { font-size: 28px; font-weight: 700; color: #111; margin-bottom: 4px; }
+  .va-detail-link { font-size: 13px; color: #3b82f6; text-decoration: none; display: block; margin-bottom: 16px; }
+  .va-meta { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+  .va-meta-item { font-size: 13px; color: #555; }
+  .va-meta-item strong { color: #111; }
+  .va-notes { background: #f8f9fa; border-radius: 8px; padding: 16px; font-size: 14px; line-height: 1.6; color: #333; margin-bottom: 24px; }
+  .va-vote-row { display: flex; gap: 8px; }
+  .va-vote-btn { flex: 1; padding: 10px; border-radius: 8px; border: 2px solid #e5e7eb; background: #fff; cursor: pointer; font-size: 14px; font-weight: 600; color: #555; }
+  .va-vote-btn.sel { color: #fff; border-color: transparent; }
+  .section-hdr { font-size: 11px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: .08em; padding: 10px 16px 4px; }
+  .ai-badge { font-size: 11px; background: #ede9fe; color: #7c3aed; padding: 2px 8px; border-radius: 999px; font-weight: 600; }
+
+  /* ══ B — Terminal Dark ══ */
+  #vb { height: 100vh; flex-direction: column; background: #0d1117; color: #c9d1d9; font-family: 'SF Mono', 'Fira Mono', monospace; }
+  .vb-titlebar { background: #161b22; border-bottom: 1px solid #30363d; padding: 10px 16px; display: flex; gap: 16px; align-items: center; flex-shrink: 0; }
+  .vb-titlebar h1 { font-size: 13px; color: #58a6ff; font-weight: 700; }
+  .vb-body { display: flex; flex: 1; overflow: hidden; }
+  .vb-list { width: 340px; min-width: 340px; overflow-y: auto; border-right: 1px solid #30363d; }
+  .vb-row { display: grid; grid-template-columns: 14px 1fr auto; gap: 8px; align-items: center; padding: 7px 12px; border-bottom: 1px solid #21262d; cursor: pointer; font-size: 12px; }
+  .vb-row:hover { background: #161b22; }
+  .vb-row.sel { background: #1c2128; border-left: 2px solid #58a6ff; }
+  .vb-sym { font-weight: 700; font-size: 13px; }
+  .vb-name { color: #e6edf3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .vb-tag { font-size: 10px; color: #6e7681; text-align: right; }
+  .vb-detail { flex: 1; overflow-y: auto; padding: 20px 24px; }
+  .vb-empty { display: flex; align-items: center; justify-content: center; height: 100%; color: #6e7681; font-size: 13px; }
+  .vb-cmd { color: #3fb950; font-size: 12px; margin-bottom: 16px; }
+  .vb-dname { font-size: 22px; color: #58a6ff; font-weight: 700; margin-bottom: 4px; }
+  .vb-url { font-size: 12px; color: #8b949e; margin-bottom: 16px; }
+  .vb-kv { display: grid; grid-template-columns: 130px 1fr; gap: 4px 12px; font-size: 12px; margin-bottom: 20px; }
+  .vb-key { color: #8b949e; }
+  .vb-val { color: #e6edf3; }
+  .vb-notes { font-size: 12px; line-height: 1.6; color: #8b949e; border-left: 2px solid #30363d; padding-left: 12px; margin-bottom: 20px; }
+  .vb-vote-row { display: flex; gap: 8px; }
+  .vb-vbtn { padding: 5px 14px; border-radius: 4px; border: 1px solid #30363d; background: #161b22; cursor: pointer; font-size: 12px; font-family: inherit; color: #8b949e; }
+  .vb-vbtn:hover { border-color: #58a6ff; color: #58a6ff; }
+  .vb-vbtn.sel { background: #1f3a5f; border-color: #58a6ff; color: #58a6ff; }
+  .vb-slabel { font-size: 10px; color: #3fb950; padding: 8px 12px 2px; text-transform: uppercase; letter-spacing: .1em; }
+
+  /* ══ C — Editorial ══ */
+  #vc { height: 100vh; flex-direction: column; background: #fff; }
+  .vc-nav { background: #fff; border-bottom: 2px solid #000; padding: 16px 24px; display: flex; align-items: baseline; gap: 20px; flex-shrink: 0; }
+  .vc-nav h1 { font-size: 14px; font-weight: 900; letter-spacing: .15em; text-transform: uppercase; }
+  .vc-nav-filters { display: flex; gap: 16px; margin-left: auto; }
+  .vc-nf { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; cursor: pointer; color: #999; border-bottom: 2px solid transparent; padding-bottom: 2px; }
+  .vc-nf.sel, .vc-nf:hover { color: #000; border-color: #000; }
+  .vc-body { display: flex; flex: 1; overflow: hidden; }
+  .vc-list { width: 340px; min-width: 340px; overflow-y: auto; border-right: 2px solid #000; }
+  .vc-card { padding: 18px 20px; border-bottom: 1px solid #e5e7eb; cursor: pointer; }
+  .vc-card:hover { background: #fafafa; }
+  .vc-card.sel { background: #f5f3ff; }
+  .vc-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+  .vc-card-name { font-size: 16px; font-weight: 900; color: #000; letter-spacing: -.02em; }
+  .vc-card-vote { font-size: 20px; }
+  .vc-card-industry { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #999; margin-bottom: 6px; }
+  .vc-card-snippet { font-size: 13px; color: #555; line-height: 1.4; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .vc-detail { flex: 1; overflow-y: auto; }
+  .vc-empty { display: flex; align-items: center; justify-content: center; height: 100%; color: #ccc; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; }
+  .vc-hero { background: #000; color: #fff; padding: 40px 40px 32px; }
+  .vc-hero-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; color: #888; margin-bottom: 8px; }
+  .vc-hero-name { font-size: 48px; font-weight: 900; letter-spacing: -.03em; margin-bottom: 8px; line-height: 1; }
+  .vc-hero-url { font-size: 13px; color: #666; text-decoration: none; }
+  .vc-dbody { padding: 32px 40px; }
+  .vc-meta-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 28px; }
+  .vc-mbox { border: 1px solid #e5e7eb; padding: 12px; }
+  .vc-mbox-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: #999; margin-bottom: 4px; }
+  .vc-mbox-val { font-size: 15px; font-weight: 700; color: #000; }
+  .vc-sec { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .1em; border-bottom: 2px solid #000; padding-bottom: 4px; margin-bottom: 12px; }
+  .vc-notes { font-size: 15px; line-height: 1.7; color: #333; margin-bottom: 28px; }
+  .vc-vote-row { display: flex; }
+  .vc-vbtn { flex: 1; padding: 14px; border: 1px solid #000; border-left: none; background: #fff; cursor: pointer; font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: .05em; color: #000; }
+  .vc-vbtn:first-child { border-left: 1px solid #000; }
+  .vc-vbtn:hover { background: #f5f5f5; }
+  .vc-vbtn.sel { background: #000; color: #fff; }
+  .vc-sdivider { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .12em; color: #999; padding: 10px 20px 4px; border-top: 1px solid #e5e7eb; margin-top: 4px; }
+
+  /* ══ D — Kanban Pipeline ══ */
+  #vd { height: 100vh; flex-direction: column; background: #f0f4f8; }
+  .vd-header { background: #fff; border-bottom: 1px solid #e2e8f0; padding: 14px 20px; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  .vd-header h1 { font-size: 16px; font-weight: 700; }
+  .vd-board { display: flex; flex: 1; overflow-x: auto; overflow-y: hidden; gap: 12px; padding: 16px; }
+  .vd-col { min-width: 220px; width: 220px; background: #e2e8f0; border-radius: 10px; display: flex; flex-direction: column; overflow: hidden; }
+  .vd-col-hdr { padding: 10px 14px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; display: flex; align-items: center; justify-content: space-between; }
+  .vd-col-count { background: rgba(0,0,0,.12); border-radius: 999px; padding: 1px 7px; font-size: 11px; }
+  .vd-cards { flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 8px; }
+  .vd-card { background: #fff; border-radius: 8px; padding: 12px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,.08); border: 2px solid transparent; }
+  .vd-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.15); }
+  .vd-card.sel { border-color: #3b82f6; }
+  .vd-card-name { font-size: 13px; font-weight: 700; color: #111; margin-bottom: 4px; }
+  .vd-card-meta { display: flex; align-items: center; gap: 6px; }
+  .vd-card-cat { font-size: 10px; color: #7c3aed; background: #ede9fe; padding: 1px 6px; border-radius: 999px; font-weight: 600; }
+  .vd-add-btn { margin: 8px; padding: 8px; border: 2px dashed #cbd5e1; border-radius: 6px; background: none; cursor: pointer; font-size: 12px; color: #94a3b8; width: calc(100% - 16px); }
+  .vd-add-btn:hover { border-color: #94a3b8; color: #64748b; }
+  .vd-drawer { position: fixed; right: 0; top: 0; bottom: 0; width: 380px; background: #fff; box-shadow: -4px 0 24px rgba(0,0,0,.15); z-index: 100; overflow-y: auto; padding: 28px; transform: translateX(100%); transition: transform .25s; }
+  .vd-drawer.open { transform: translateX(0); }
+  .vd-drawer-close { position: absolute; top: 16px; right: 16px; background: none; border: none; font-size: 20px; cursor: pointer; color: #888; }
+  .vd-drawer-name { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+  .vd-drawer-url { font-size: 13px; color: #3b82f6; text-decoration: none; display: block; margin-bottom: 16px; }
+  .vd-move-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px; }
+  .vd-move-btn { font-size: 11px; padding: 5px 10px; border-radius: 6px; border: 1px solid #e2e8f0; background: #f8fafc; cursor: pointer; font-weight: 600; color: #475569; }
+  .vd-move-btn:hover { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+  .vd-move-cur { background: #dbeafe; border-color: #3b82f6; color: #1d4ed8; }
+  .vd-notes { font-size: 14px; line-height: 1.6; color: #374151; background: #f8fafc; padding: 14px; border-radius: 8px; margin-bottom: 20px; }
+  .vd-vote-row { display: flex; gap: 8px; }
+  .vd-vbtn { flex: 1; padding: 10px; border-radius: 8px; border: 2px solid #e2e8f0; background: #fff; cursor: pointer; font-size: 13px; font-weight: 600; color: #555; }
+  .vd-vbtn.sel { color: #fff; border-color: transparent; }
+
+  /* ══ E — Dashboard + Command Palette ══ */
+  #ve { height: 100vh; flex-direction: column; background: #fafafa; }
+  .ve-topbar { background: #fff; border-bottom: 1px solid #e5e7eb; padding: 12px 24px; display: flex; align-items: center; gap: 16px; flex-shrink: 0; }
+  .ve-topbar h1 { font-size: 16px; font-weight: 700; }
+  .ve-search-trigger { flex: 1; max-width: 400px; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px 14px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #9ca3af; font-size: 14px; }
+  .ve-search-trigger:hover { background: #eff0f1; }
+  .ve-kbd { font-size: 11px; background: #e5e7eb; border-radius: 4px; padding: 1px 5px; margin-left: auto; color: #6b7280; font-family: monospace; }
+  .ve-body { display: flex; flex: 1; overflow: hidden; }
+  .ve-main { flex: 1; overflow-y: auto; padding: 24px; }
+  .ve-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+  .ve-stat { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 18px 20px; }
+  .ve-stat-n { font-size: 32px; font-weight: 800; color: #111; line-height: 1; margin-bottom: 4px; }
+  .ve-stat-label { font-size: 12px; color: #6b7280; font-weight: 500; }
+  .ve-stat-sub { font-size: 11px; color: #9ca3af; margin-top: 4px; }
+  .ve-section-title { font-size: 13px; font-weight: 700; color: #374151; margin-bottom: 12px; }
+  .ve-cats { margin-bottom: 28px; }
+  .ve-cat-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .ve-cat-label { font-size: 12px; color: #374151; width: 160px; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ve-cat-bar-bg { flex: 1; height: 8px; background: #f3f4f6; border-radius: 999px; overflow: hidden; }
+  .ve-cat-bar { height: 100%; border-radius: 999px; background: #3b82f6; }
+  .ve-cat-count { font-size: 11px; color: #9ca3af; width: 20px; text-align: right; }
+  .ve-recent { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px 20px; margin-bottom: 28px; }
+  .ve-recent-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f3f4f6; font-size: 13px; }
+  .ve-recent-row:last-child { border-bottom: none; }
+  .ve-recent-icon { width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+  .ve-recent-name { font-weight: 600; color: #111; flex: 1; }
+  .ve-recent-action { color: #6b7280; font-size: 12px; }
+  .ve-sidebar { width: 280px; flex-shrink: 0; border-left: 1px solid #e5e7eb; background: #fff; overflow-y: auto; padding: 20px; }
+  .ve-insight { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 14px; margin-bottom: 12px; }
+  .ve-insight-title { font-size: 12px; font-weight: 700; color: #166534; margin-bottom: 6px; }
+  .ve-insight-body { font-size: 12px; color: #374151; line-height: 1.5; }
+  .ve-insight.warn { background: #fffbeb; border-color: #fde68a; }
+  .ve-insight.warn .ve-insight-title { color: #92400e; }
+  .ve-insight.info { background: #eff6ff; border-color: #bfdbfe; }
+  .ve-insight.info .ve-insight-title { color: #1e40af; }
+  /* Command palette overlay */
+  .ve-palette-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 200; align-items: flex-start; justify-content: center; padding-top: 80px; }
+  .ve-palette-overlay.open { display: flex; }
+  .ve-palette { background: #fff; border-radius: 12px; width: 560px; box-shadow: 0 20px 60px rgba(0,0,0,.3); overflow: hidden; }
+  .ve-palette-input { width: 100%; padding: 16px 20px; font-size: 16px; border: none; outline: none; border-bottom: 1px solid #e5e7eb; }
+  .ve-palette-results { max-height: 360px; overflow-y: auto; }
+  .ve-palette-item { display: flex; align-items: center; gap: 12px; padding: 12px 20px; cursor: pointer; }
+  .ve-palette-item:hover, .ve-palette-item.focused { background: #f5f3ff; }
+  .ve-palette-item-name { font-size: 14px; font-weight: 600; color: #111; flex: 1; }
+  .ve-palette-item-meta { font-size: 12px; color: #6b7280; }
+  .ve-palette-empty { padding: 24px; text-align: center; color: #9ca3af; font-size: 14px; }
+
+  /* ══ F — Decision Queue / Triage ══ */
+  #vf { height: 100vh; flex-direction: column; background: #f8f9fa; }
+  .vf-header { background: #fff; border-bottom: 1px solid #e5e7eb; padding: 14px 24px; display: flex; align-items: center; gap: 16px; flex-shrink: 0; }
+  .vf-header h1 { font-size: 16px; font-weight: 700; }
+  .vf-progress-wrap { flex: 1; max-width: 300px; }
+  .vf-progress-label { font-size: 12px; color: #6b7280; margin-bottom: 4px; }
+  .vf-progress-bar-bg { height: 6px; background: #e5e7eb; border-radius: 999px; overflow: hidden; }
+  .vf-progress-bar { height: 100%; background: #3b82f6; border-radius: 999px; transition: width .3s; }
+  .vf-mode-toggle { margin-left: auto; display: flex; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; }
+  .vf-mode-btn { padding: 6px 14px; font-size: 12px; font-weight: 600; background: #fff; border: none; cursor: pointer; color: #6b7280; }
+  .vf-mode-btn.sel { background: #111; color: #fff; }
+  .vf-body { flex: 1; display: flex; align-items: center; justify-content: center; padding: 32px; overflow: hidden; }
+  .vf-card { background: #fff; border-radius: 20px; box-shadow: 0 4px 40px rgba(0,0,0,.12); max-width: 560px; width: 100%; overflow: hidden; }
+  .vf-card-hero { padding: 36px 36px 24px; border-bottom: 1px solid #f3f4f6; }
+  .vf-card-cat { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: #7c3aed; margin-bottom: 8px; }
+  .vf-card-name { font-size: 36px; font-weight: 800; color: #111; letter-spacing: -.02em; margin-bottom: 4px; }
+  .vf-card-url { font-size: 13px; color: #3b82f6; text-decoration: none; }
+  .vf-card-meta { display: flex; gap: 20px; padding: 16px 36px; border-bottom: 1px solid #f3f4f6; }
+  .vf-meta-item { font-size: 13px; color: #6b7280; }
+  .vf-meta-item strong { color: #111; font-weight: 600; }
+  .vf-card-notes { padding: 20px 36px; font-size: 14px; line-height: 1.65; color: #374151; border-bottom: 1px solid #f3f4f6; max-height: 160px; overflow-y: auto; }
+  .vf-actions { padding: 20px 36px; }
+  .vf-vote-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 12px; }
+  .vf-vbtn { padding: 14px; border-radius: 10px; border: 2px solid #e5e7eb; background: #fff; cursor: pointer; font-size: 14px; font-weight: 700; color: #374151; transition: all .15s; }
+  .vf-vbtn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.1); }
+  .vf-vbtn.sel { color: #fff; border-color: transparent; }
+  .vf-skip-row { display: flex; gap: 8px; align-items: center; justify-content: center; }
+  .vf-skip-btn { padding: 8px 20px; border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; cursor: pointer; font-size: 13px; color: #6b7280; }
+  .vf-skip-btn:hover { background: #f3f4f6; }
+  .vf-kbd-hint { font-size: 11px; color: #9ca3af; }
+  .vf-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; gap: 12px; }
+  .vf-empty-icon { font-size: 48px; }
+  .vf-empty-text { font-size: 18px; font-weight: 700; color: #374151; }
+  .vf-empty-sub { font-size: 14px; color: #9ca3af; }
+
+  /* ══ G — Preference Insights ══ */
+  #vg { height: 100vh; flex-direction: column; background: #f8f9fa; }
+  .vg-header { background: #fff; border-bottom: 1px solid #e5e7eb; padding: 14px 24px; flex-shrink: 0; }
+  .vg-header h1 { font-size: 16px; font-weight: 700; }
+  .vg-header p { font-size: 12px; color: #6b7280; margin-top: 2px; }
+  .vg-body { display: flex; flex: 1; overflow: hidden; }
+  .vg-profile { width: 260px; flex-shrink: 0; border-right: 1px solid #e5e7eb; background: #fff; overflow-y: auto; padding: 20px; }
+  .vg-profile-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #6b7280; margin-bottom: 16px; }
+  .vg-pref-section { margin-bottom: 20px; }
+  .vg-pref-label { font-size: 11px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; }
+  .vg-pref-tag { display: inline-flex; align-items: center; gap: 4px; background: #eff6ff; color: #1d4ed8; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; margin: 2px; }
+  .vg-pref-tag.strong { background: #dcfce7; color: #166534; }
+  .vg-pref-tag.weak { background: #fef3c7; color: #92400e; }
+  .vg-discover-btn { width: 100%; padding: 12px; background: #111; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 700; margin-top: 16px; }
+  .vg-discover-btn:hover { background: #333; }
+  .vg-list { flex: 1; overflow-y: auto; padding: 20px; }
+  .vg-list-title { font-size: 13px; font-weight: 700; color: #374151; margin-bottom: 12px; }
+  .vg-row { display: flex; align-items: center; gap: 12px; background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px 16px; margin-bottom: 8px; cursor: pointer; }
+  .vg-row:hover { box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+  .vg-row.sel { border-color: #3b82f6; background: #eff6ff; }
+  .vg-score-ring { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; flex-shrink: 0; }
+  .vg-row-info { flex: 1; }
+  .vg-row-name { font-size: 14px; font-weight: 700; color: #111; }
+  .vg-row-why { font-size: 12px; color: #6b7280; margin-top: 2px; }
+  .vg-row-vote { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 999px; }
+  .vg-detail { width: 320px; flex-shrink: 0; border-left: 1px solid #e5e7eb; background: #fff; overflow-y: auto; padding: 20px; }
+  .vg-detail-empty { display: flex; align-items: center; justify-content: center; height: 100%; color: #9ca3af; font-size: 13px; }
+  .vg-detail-name { font-size: 20px; font-weight: 700; margin-bottom: 16px; }
+  .vg-match-breakdown { margin-bottom: 20px; }
+  .vg-match-row { display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: #374151; padding: 6px 0; border-bottom: 1px solid #f3f4f6; }
+  .vg-match-check { color: #16a34a; font-weight: 700; }
+  .vg-match-x { color: #dc2626; }
+  .vg-notes-small { font-size: 13px; line-height: 1.6; color: #6b7280; }
+
+  /* ══ H — Market Map ══ */
+  #vh { height: 100vh; flex-direction: column; background: #fff; }
+  .vh-header { background: #fff; border-bottom: 1px solid #e5e7eb; padding: 14px 24px; display: flex; align-items: center; gap: 16px; flex-shrink: 0; }
+  .vh-header h1 { font-size: 16px; font-weight: 700; }
+  .vh-cat-filters { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+  .vh-cf { font-size: 11px; padding: 3px 10px; border-radius: 999px; border: 1px solid #e5e7eb; cursor: pointer; font-weight: 600; color: #6b7280; background: #fff; }
+  .vh-cf.sel { background: #111; color: #fff; border-color: #111; }
+  .vh-body { display: flex; flex: 1; overflow: hidden; }
+  .vh-map { flex: 1; position: relative; overflow: hidden; padding: 20px; }
+  .vh-axis-y { position: absolute; left: 60px; top: 20px; bottom: 60px; display: flex; flex-direction: column; justify-content: space-between; font-size: 11px; color: #9ca3af; text-align: right; width: 48px; }
+  .vh-axis-x { position: absolute; left: 80px; right: 20px; bottom: 20px; display: flex; justify-content: space-between; font-size: 11px; color: #9ca3af; }
+  .vh-axis-ylabel { position: absolute; left: 8px; top: 50%; transform: translateY(-50%) rotate(-90deg); font-size: 11px; color: #9ca3af; white-space: nowrap; }
+  .vh-axis-xlabel { position: absolute; bottom: 0px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #9ca3af; }
+  .vh-plot { position: absolute; left: 80px; right: 20px; top: 20px; bottom: 60px; border-left: 1px solid #e5e7eb; border-bottom: 1px solid #e5e7eb; }
+  .vh-grid-h { position: absolute; left: 0; right: 0; height: 1px; background: #f3f4f6; }
+  .vh-grid-v { position: absolute; top: 0; bottom: 0; width: 1px; background: #f3f4f6; }
+  .vh-dot { position: absolute; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #fff; transform: translate(-50%, -50%); transition: all .15s; border: 2px solid #fff; box-shadow: 0 2px 8px rgba(0,0,0,.2); }
+  .vh-dot:hover { transform: translate(-50%, -50%) scale(1.4); z-index: 10; }
+  .vh-dot.sel { transform: translate(-50%, -50%) scale(1.5); z-index: 10; box-shadow: 0 0 0 3px rgba(59,130,246,.4); }
+  .vh-tooltip { position: absolute; background: #111; color: #fff; font-size: 12px; padding: 6px 10px; border-radius: 6px; pointer-events: none; white-space: nowrap; z-index: 20; display: none; }
+  .vh-legend { display: flex; gap: 16px; padding: 8px 20px; border-top: 1px solid #e5e7eb; flex-shrink: 0; background: #fff; }
+  .vh-legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #374151; }
+  .vh-legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .vh-detail { width: 300px; flex-shrink: 0; border-left: 1px solid #e5e7eb; overflow-y: auto; padding: 20px; }
+  .vh-detail-empty { display: flex; align-items: center; justify-content: center; height: 100%; color: #9ca3af; font-size: 13px; }
+
+  /* ══ I — Comparison Mode ══ */
+  #vi { height: 100vh; flex-direction: column; background: #f8f9fa; }
+  .vi-header { background: #fff; border-bottom: 1px solid #e5e7eb; padding: 14px 24px; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  .vi-header h1 { font-size: 16px; font-weight: 700; }
+  .vi-header p { font-size: 12px; color: #9ca3af; margin-left: 8px; }
+  .vi-body { display: flex; flex: 1; overflow: hidden; }
+  .vi-picker { width: 220px; flex-shrink: 0; border-right: 1px solid #e5e7eb; background: #fff; overflow-y: auto; }
+  .vi-pick-hdr { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #9ca3af; padding: 14px 16px 6px; }
+  .vi-pick-item { display: flex; align-items: center; gap: 10px; padding: 10px 16px; cursor: pointer; border-bottom: 1px solid #f3f4f6; font-size: 13px; }
+  .vi-pick-item:hover { background: #f8f9fa; }
+  .vi-checkbox { width: 16px; height: 16px; border: 2px solid #d1d5db; border-radius: 4px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .vi-checkbox.checked { background: #3b82f6; border-color: #3b82f6; color: #fff; font-size: 10px; }
+  .vi-pick-name { flex: 1; font-weight: 600; color: #111; }
+  .vi-pick-vote { font-size: 11px; }
+  .vi-table-wrap { flex: 1; overflow: auto; }
+  .vi-table { border-collapse: collapse; width: 100%; }
+  .vi-table th { background: #fff; padding: 14px 18px; font-size: 13px; font-weight: 700; color: #111; border-bottom: 2px solid #e5e7eb; border-right: 1px solid #f3f4f6; text-align: left; position: sticky; top: 0; min-width: 160px; }
+  .vi-table th:first-child { background: #f8f9fa; color: #6b7280; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; min-width: 120px; position: sticky; top: 0; left: 0; z-index: 2; }
+  .vi-table td { padding: 12px 18px; border-bottom: 1px solid #f3f4f6; border-right: 1px solid #f3f4f6; font-size: 13px; color: #374151; vertical-align: top; }
+  .vi-table td:first-child { background: #f8f9fa; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #6b7280; position: sticky; left: 0; }
+  .vi-table tr:hover td { background: #f0f7ff; }
+  .vi-table tr:hover td:first-child { background: #e8f0fe; }
+  .vi-winner-row td { background: #f0fdf4 !important; font-weight: 700; }
+  .vi-winner-row td:first-child { background: #dcfce7 !important; }
+  .vi-best-badge { background: #16a34a; color: #fff; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700; margin-left: 6px; }
+  .vi-empty { display: flex; align-items: center; justify-content: center; flex: 1; flex-direction: column; gap: 8px; color: #9ca3af; font-size: 14px; }
+
+  /* ══ K — Three-pane: list | detail | persistent insights ══ */
+  #vk { height: 100vh; flex-direction: column; background: #f8f9fa; }
+  .vk-topbar { background: #fff; border-bottom: 1px solid #e5e7eb; padding: 12px 20px; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  .vk-topbar h1 { font-size: 16px; font-weight: 700; }
+  .vk-search { flex: 1; max-width: 320px; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 8px; padding: 7px 12px; font-size: 13px; outline: none; }
+  .vk-search:focus { border-color: #3b82f6; background: #fff; }
+  .vk-filter-pills { display: flex; gap: 4px; margin-left: auto; }
+  .vk-pill { font-size: 11px; padding: 3px 10px; border-radius: 999px; border: 1px solid #e5e7eb; background: #fff; cursor: pointer; font-weight: 600; color: #6b7280; }
+  .vk-pill.sel { background: #111; color: #fff; border-color: #111; }
+  .vk-body { display: flex; flex: 1; overflow: hidden; }
+  /* Left: company list */
+  .vk-list { width: 240px; flex-shrink: 0; border-right: 1px solid #e5e7eb; background: #fff; overflow-y: auto; }
+  .vk-list-hdr { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #9ca3af; padding: 10px 14px 4px; }
+  .vk-list-item { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid #f3f4f6; cursor: pointer; }
+  .vk-list-item:hover { background: #f8f9fa; }
+  .vk-list-item.sel { background: #eff6ff; border-left: 3px solid #3b82f6; }
+  .vk-list-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .vk-list-name { font-size: 13px; font-weight: 600; color: #111; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .vk-list-cat { font-size: 10px; color: #9ca3af; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* Center: detail */
+  .vk-detail { flex: 1; overflow-y: auto; padding: 28px 32px; }
+  .vk-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 8px; color: #9ca3af; }
+  .vk-empty-big { font-size: 40px; }
+  .vk-empty-text { font-size: 15px; font-weight: 600; color: #374151; }
+  .vk-empty-sub { font-size: 13px; }
+  .vk-detail-name { font-size: 26px; font-weight: 800; color: #111; margin-bottom: 2px; letter-spacing: -.02em; }
+  .vk-detail-url { font-size: 13px; color: #3b82f6; text-decoration: none; display: block; margin-bottom: 16px; }
+  .vk-meta-row { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 16px; font-size: 13px; color: #6b7280; }
+  .vk-meta-row strong { color: #111; }
+  .vk-notes { font-size: 14px; line-height: 1.65; color: #374151; margin-bottom: 24px; }
+  .vk-vote-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #9ca3af; margin-bottom: 8px; }
+  .vk-vote-row { display: flex; gap: 8px; }
+  .vk-vbtn { flex: 1; padding: 10px; border-radius: 8px; border: 2px solid #e5e7eb; background: #fff; cursor: pointer; font-size: 13px; font-weight: 700; color: #555; }
+  .vk-vbtn.sel { color: #fff; border-color: transparent; }
+  /* Right: persistent insights */
+  .vk-insights { width: 260px; flex-shrink: 0; border-left: 1px solid #e5e7eb; background: #fafafa; overflow-y: auto; padding: 18px; }
+  .vk-ins-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #9ca3af; margin-bottom: 14px; }
+  .vk-ins-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 14px; margin-bottom: 10px; }
+  .vk-ins-card-title { font-size: 12px; font-weight: 700; color: #374151; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+  .vk-ins-card-body { font-size: 12px; color: #6b7280; line-height: 1.5; }
+  .vk-tag { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; margin: 2px; }
+  .vk-vote-dist { display: flex; flex-direction: column; gap: 6px; }
+  .vk-vote-dist-row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+  .vk-vote-dist-bar-bg { flex: 1; height: 6px; background: #f3f4f6; border-radius: 999px; overflow: hidden; }
+  .vk-vote-dist-bar { height: 100%; border-radius: 999px; }
+  .vk-discover-btn { width: 100%; padding: 11px; background: #111; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 700; margin-top: 4px; }
+  .vk-discover-btn:hover { background: #333; }
+
+  /* ══ L — Two-pane, right toggles Detail ↔ Insights ══ */
+  #vl { height: 100vh; flex-direction: column; background: #f8f9fa; }
+  .vl-topbar { background: #fff; border-bottom: 1px solid #e5e7eb; padding: 12px 20px; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  .vl-topbar h1 { font-size: 16px; font-weight: 700; }
+  .vl-filter-pills { display: flex; gap: 4px; margin-left: auto; }
+  .vl-pill { font-size: 11px; padding: 3px 10px; border-radius: 999px; border: 1px solid #e5e7eb; background: #fff; cursor: pointer; font-weight: 600; color: #6b7280; }
+  .vl-pill.sel { background: #111; color: #fff; border-color: #111; }
+  .vl-body { display: flex; flex: 1; overflow: hidden; }
+  /* Left: list */
+  .vl-list { width: 280px; flex-shrink: 0; border-right: 1px solid #e5e7eb; background: #fff; overflow-y: auto; }
+  .vl-list-hdr { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #9ca3af; padding: 10px 16px 4px; }
+  .vl-list-item { display: flex; align-items: center; gap: 10px; padding: 11px 16px; border-bottom: 1px solid #f3f4f6; cursor: pointer; }
+  .vl-list-item:hover { background: #f8f9fa; }
+  .vl-list-item.sel { background: #eff6ff; border-left: 3px solid #3b82f6; }
+  .vl-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .vl-item-name { font-size: 13px; font-weight: 600; color: #111; flex: 1; }
+  .vl-item-cat { font-size: 10px; color: #9ca3af; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 80px; }
+  /* Right: tab-switching panel */
+  .vl-right { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .vl-tab-bar { display: flex; border-bottom: 1px solid #e5e7eb; background: #fff; flex-shrink: 0; }
+  .vl-tab { flex: 1; padding: 12px; text-align: center; font-size: 13px; font-weight: 600; color: #6b7280; cursor: pointer; border-bottom: 2px solid transparent; }
+  .vl-tab.sel { color: #111; border-bottom-color: #3b82f6; }
+  .vl-panel { flex: 1; overflow-y: auto; padding: 28px 32px; display: none; }
+  .vl-panel.sel { display: block; }
+  /* detail panel content */
+  .vl-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 60%; gap: 8px; color: #9ca3af; text-align: center; }
+  .vl-detail-name { font-size: 26px; font-weight: 800; color: #111; margin-bottom: 2px; }
+  .vl-detail-url { font-size: 13px; color: #3b82f6; text-decoration: none; display: block; margin-bottom: 16px; }
+  .vl-meta-row { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 16px; font-size: 13px; color: #6b7280; }
+  .vl-meta-row strong { color: #111; }
+  .vl-notes { font-size: 14px; line-height: 1.65; color: #374151; margin-bottom: 24px; }
+  .vl-vote-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #9ca3af; margin-bottom: 8px; }
+  .vl-vote-row { display: flex; gap: 8px; }
+  .vl-vbtn { flex: 1; padding: 10px; border-radius: 8px; border: 2px solid #e5e7eb; background: #fff; cursor: pointer; font-size: 13px; font-weight: 700; color: #555; }
+  .vl-vbtn.sel { color: #fff; border-color: transparent; }
+  /* insights panel content */
+  .vl-ins-section { margin-bottom: 24px; }
+  .vl-ins-section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #9ca3af; margin-bottom: 10px; }
+  .vl-ins-card { background: #f8f9fa; border-radius: 8px; padding: 14px; margin-bottom: 10px; font-size: 13px; color: #374151; line-height: 1.5; }
+  .vl-ins-card strong { color: #111; }
+  .vl-tag { display: inline-block; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 999px; margin: 2px; }
+  .vl-discover-btn { padding: 12px 24px; background: #111; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 700; }
+  .vl-discover-btn:hover { background: #333; }
+  .vl-company-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .vl-chip { display: flex; align-items: center; gap: 6px; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 6px 10px; cursor: pointer; font-size: 13px; font-weight: 600; color: #111; }
+  .vl-chip:hover { border-color: #3b82f6; background: #eff6ff; }
+  .vl-chip-dot { width: 7px; height: 7px; border-radius: 50%; }
+
+  /* ══ M — Dashboard-first, company detail as drawer ══ */
+  #vm { height: 100vh; flex-direction: column; background: #f8f9fa; }
+  .vm-topbar { background: #fff; border-bottom: 1px solid #e5e7eb; padding: 12px 20px; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  .vm-topbar h1 { font-size: 16px; font-weight: 700; }
+  .vm-search-trigger { background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 8px; padding: 7px 14px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #9ca3af; font-size: 13px; flex: 1; max-width: 300px; }
+  .vm-search-trigger:hover { border-color: #d1d5db; }
+  .vm-kbd { font-size: 10px; background: #e5e7eb; border-radius: 3px; padding: 1px 5px; margin-left: auto; font-family: monospace; color: #6b7280; }
+  .vm-body { display: flex; flex: 1; overflow: hidden; }
+  /* Main dashboard area */
+  .vm-main { flex: 1; overflow-y: auto; padding: 24px; }
+  .vm-section-title { font-size: 13px; font-weight: 700; color: #374151; margin-bottom: 12px; margin-top: 4px; }
+  /* Company grid in main area */
+  .vm-company-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin-bottom: 28px; }
+  .vm-company-tile { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px; cursor: pointer; transition: all .15s; }
+  .vm-company-tile:hover { box-shadow: 0 2px 12px rgba(0,0,0,.1); border-color: #d1d5db; }
+  .vm-company-tile.sel { border-color: #3b82f6; background: #eff6ff; }
+  .vm-tile-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .vm-tile-name { font-size: 13px; font-weight: 700; color: #111; }
+  .vm-tile-vote { font-size: 16px; }
+  .vm-tile-cat { font-size: 10px; color: #7c3aed; background: #ede9fe; padding: 2px 7px; border-radius: 999px; font-weight: 600; }
+  .vm-tile-quality { font-size: 11px; color: #9ca3af; margin-top: 4px; }
+  /* Insights sidebar */
+  .vm-sidebar { width: 280px; flex-shrink: 0; border-left: 1px solid #e5e7eb; background: #fff; overflow-y: auto; padding: 20px; }
+  .vm-sidebar-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #9ca3af; margin-bottom: 14px; }
+  .vm-ins-block { margin-bottom: 20px; }
+  .vm-ins-block-title { font-size: 12px; font-weight: 700; color: #374151; margin-bottom: 8px; }
+  .vm-ins-tag { display: inline-block; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 999px; margin: 2px; }
+  .vm-stat-pair { display: flex; justify-content: space-between; font-size: 13px; padding: 6px 0; border-bottom: 1px solid #f3f4f6; }
+  .vm-stat-pair-label { color: #6b7280; }
+  .vm-stat-pair-val { font-weight: 700; color: #111; }
+  .vm-discover-btn { width: 100%; padding: 11px; background: #111; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 700; margin-top: 8px; }
+  .vm-discover-btn:hover { background: #333; }
+  /* Company drawer */
+  .vm-drawer { position: fixed; right: 0; top: 0; bottom: 0; width: 420px; background: #fff; box-shadow: -4px 0 32px rgba(0,0,0,.15); z-index: 100; transform: translateX(100%); transition: transform .25s; display: flex; flex-direction: column; }
+  .vm-drawer.open { transform: translateX(0); }
+  .vm-drawer-topbar { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; border-bottom: 1px solid #e5e7eb; flex-shrink: 0; }
+  .vm-drawer-title { font-size: 15px; font-weight: 700; }
+  .vm-drawer-close { background: #f3f4f6; border: none; border-radius: 6px; width: 28px; height: 28px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; color: #6b7280; }
+  .vm-drawer-body { flex: 1; overflow-y: auto; padding: 24px; }
+  .vm-drawer-name { font-size: 22px; font-weight: 800; color: #111; margin-bottom: 2px; }
+  .vm-drawer-url { font-size: 13px; color: #3b82f6; text-decoration: none; display: block; margin-bottom: 14px; }
+  .vm-drawer-meta { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; font-size: 13px; color: #6b7280; }
+  .vm-drawer-meta strong { color: #111; }
+  .vm-drawer-notes { font-size: 14px; line-height: 1.65; color: #374151; margin-bottom: 22px; }
+  .vm-drawer-vote-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #9ca3af; margin-bottom: 8px; }
+  .vm-drawer-vote-row { display: flex; gap: 8px; }
+  .vm-dvbtn { flex: 1; padding: 10px; border-radius: 8px; border: 2px solid #e5e7eb; background: #fff; cursor: pointer; font-size: 12px; font-weight: 700; color: #555; }
+  .vm-dvbtn.sel { color: #fff; border-color: transparent; }
+  /* Command palette */
+  .vm-palette-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 200; align-items: flex-start; justify-content: center; padding-top: 80px; }
+  .vm-palette-overlay.open { display: flex; }
+  .vm-palette { background: #fff; border-radius: 12px; width: 520px; box-shadow: 0 20px 60px rgba(0,0,0,.25); overflow: hidden; }
+  .vm-palette-input { width: 100%; padding: 15px 18px; font-size: 15px; border: none; outline: none; border-bottom: 1px solid #e5e7eb; }
+  .vm-palette-results { max-height: 320px; overflow-y: auto; }
+  .vm-palette-item { display: flex; align-items: center; gap: 12px; padding: 11px 18px; cursor: pointer; font-size: 13px; }
+  .vm-palette-item:hover, .vm-palette-item.focus { background: #eff6ff; }
+  .vm-palette-item-name { font-weight: 600; color: #111; flex: 1; }
+  .vm-palette-item-meta { font-size: 11px; color: #9ca3af; }
+
+  /* ══ J — Outreach Timeline / CRM ══ */
+  #vj { height: 100vh; flex-direction: column; background: #f8f9fa; }
+  .vj-header { background: #fff; border-bottom: 1px solid #e5e7eb; padding: 14px 24px; display: flex; align-items: center; gap: 16px; flex-shrink: 0; }
+  .vj-header h1 { font-size: 16px; font-weight: 700; }
+  .vj-funnel { display: flex; gap: 0; margin-left: auto; }
+  .vj-funnel-step { padding: 6px 14px; font-size: 11px; font-weight: 700; background: #f3f4f6; border: 1px solid #e5e7eb; border-right: none; cursor: default; }
+  .vj-funnel-step:first-child { border-radius: 6px 0 0 6px; }
+  .vj-funnel-step:last-child { border-right: 1px solid #e5e7eb; border-radius: 0 6px 6px 0; }
+  .vj-funnel-n { font-size: 14px; font-weight: 800; color: #111; display: block; }
+  .vj-funnel-label { color: #6b7280; }
+  .vj-body { display: flex; flex: 1; overflow: hidden; }
+  .vj-timeline { flex: 1; overflow-y: auto; padding: 20px 24px; }
+  .vj-section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: #6b7280; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  .vj-section-title::after { content: ''; flex: 1; height: 1px; background: #e5e7eb; }
+  .vj-section { margin-bottom: 24px; }
+  .vj-entry { display: flex; gap: 14px; background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px 16px; margin-bottom: 8px; cursor: pointer; }
+  .vj-entry:hover { box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+  .vj-entry.sel { border-color: #3b82f6; background: #eff6ff; }
+  .vj-entry.overdue { border-color: #fca5a5; background: #fff5f5; }
+  .vj-entry-dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 4px; flex-shrink: 0; }
+  .vj-entry-main { flex: 1; }
+  .vj-entry-name { font-size: 14px; font-weight: 700; color: #111; }
+  .vj-entry-stage { font-size: 12px; color: #6b7280; margin-top: 2px; }
+  .vj-entry-date { font-size: 11px; color: #9ca3af; text-align: right; flex-shrink: 0; }
+  .vj-entry-actions { display: flex; gap: 6px; margin-top: 8px; }
+  .vj-action-btn { font-size: 11px; padding: 4px 10px; border: 1px solid #e5e7eb; border-radius: 6px; background: #fff; cursor: pointer; color: #374151; font-weight: 500; }
+  .vj-action-btn:hover { background: #f3f4f6; }
+  .vj-action-btn.primary { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+  .vj-sidebar { width: 300px; flex-shrink: 0; border-left: 1px solid #e5e7eb; background: #fff; overflow-y: auto; padding: 20px; }
+  .vj-sidebar-title { font-size: 13px; font-weight: 700; color: #374151; margin-bottom: 14px; }
+  .vj-activity-item { display: flex; gap: 10px; margin-bottom: 14px; font-size: 13px; }
+  .vj-activity-icon { width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; background: #f3f4f6; }
+  .vj-activity-text { color: #374151; line-height: 1.4; }
+  .vj-activity-time { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+  .vj-detail-pane { padding-top: 24px; border-top: 1px solid #e5e7eb; margin-top: 24px; }
+  .vj-detail-name { font-size: 18px; font-weight: 700; margin-bottom: 12px; }
+  .vj-detail-notes { font-size: 13px; line-height: 1.6; color: #374151; background: #f8f9fa; padding: 12px; border-radius: 8px; margin-bottom: 14px; }
+  .vj-detail-vote-row { display: flex; gap: 6px; }
+  .vj-dvbtn { flex: 1; padding: 8px; border-radius: 6px; border: 2px solid #e5e7eb; background: #fff; cursor: pointer; font-size: 12px; font-weight: 600; color: #555; }
+  .vj-dvbtn.sel { color: #fff; border-color: transparent; }
+</style>
+</head>
+<body>
+
+<!-- ══════════ VARIANT A — Clean Sidebar ══════════ -->
+<div id="va" class="variant">
+  <div class="va-header">
+    <h1>Companies</h1>
+    <div class="va-filters">
+      <button class="va-filter-btn sel" data-filter="all">All</button>
+      <button class="va-filter-btn" data-filter="love">Love</button>
+      <button class="va-filter-btn" data-filter="like">Like</button>
+      <button class="va-filter-btn" data-filter="neutral">Neutral</button>
+    </div>
+  </div>
+  <div class="va-body">
+    <div class="va-list" id="va-list"></div>
+    <div class="va-detail" id="va-detail"><div class="va-empty">← Select a company</div></div>
+  </div>
+</div>
+
+<!-- ══════════ VARIANT B — Terminal Dark ══════════ -->
+<div id="vb" class="variant">
+  <div class="vb-titlebar">
+    <h1>~/jobhunt</h1>
+    <span style="font-size:12px;color:#3fb950">$ browse companies</span>
+  </div>
+  <div class="vb-body">
+    <div class="vb-list" id="vb-list"></div>
+    <div class="vb-detail" id="vb-detail"><div class="vb-empty">select a company to inspect_</div></div>
+  </div>
+</div>
+
+<!-- ══════════ VARIANT C — Editorial ══════════ -->
+<div id="vc" class="variant">
+  <div class="vc-nav">
+    <h1>Jobhunt</h1>
+    <div class="vc-nav-filters">
+      <span class="vc-nf sel" data-filter="all">All</span>
+      <span class="vc-nf" data-filter="love">Love</span>
+      <span class="vc-nf" data-filter="like">Like</span>
+      <span class="vc-nf" data-filter="neutral">Neutral</span>
+    </div>
+  </div>
+  <div class="vc-body">
+    <div class="vc-list" id="vc-list"></div>
+    <div class="vc-detail" id="vc-detail"><div class="vc-empty">Select a Company</div></div>
+  </div>
+</div>
+
+<!-- ══════════ VARIANT D — Kanban Pipeline ══════════ -->
+<div id="vd" class="variant">
+  <div class="vd-header">
+    <h1>Pipeline</h1>
+    <span style="font-size:12px;color:#94a3b8">Drag cards to move stages (not wired)</span>
+  </div>
+  <div class="vd-board" id="vd-board"></div>
+  <div class="vd-drawer" id="vd-drawer">
+    <button class="vd-drawer-close" id="vd-drawer-close">×</button>
+    <div id="vd-drawer-content"></div>
+  </div>
+</div>
+
+<!-- ══════════ VARIANT E — Dashboard + Command Palette ══════════ -->
+<div id="ve" class="variant">
+  <div class="ve-topbar">
+    <h1>Overview</h1>
+    <div class="ve-search-trigger" id="ve-search-trigger">
+      <span>🔍</span>
+      <span>Search companies…</span>
+      <span class="ve-kbd">⌘K</span>
+    </div>
+  </div>
+  <div class="ve-body">
+    <div class="ve-main" id="ve-main"></div>
+    <div class="ve-sidebar" id="ve-sidebar"></div>
+  </div>
+  <div class="ve-palette-overlay" id="ve-palette">
+    <div class="ve-palette">
+      <input class="ve-palette-input" id="ve-palette-input" placeholder="Search companies…" autocomplete="off">
+      <div class="ve-palette-results" id="ve-palette-results"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ VARIANT F — Decision Queue ══════════ -->
+<div id="vf" class="variant">
+  <div class="vf-header">
+    <h1>Triage</h1>
+    <div class="vf-progress-wrap">
+      <div class="vf-progress-label" id="vf-progress-label"></div>
+      <div class="vf-progress-bar-bg"><div class="vf-progress-bar" id="vf-progress-bar"></div></div>
+    </div>
+    <div class="vf-mode-toggle">
+      <button class="vf-mode-btn sel" data-mode="all">All</button>
+      <button class="vf-mode-btn" data-mode="unvoted">Unvoted</button>
+      <button class="vf-mode-btn" data-mode="revisit">Revisit</button>
+    </div>
+  </div>
+  <div id="vf-body-wrap" style="display:flex;flex:1;overflow:hidden;"></div>
+</div>
+
+<!-- ══════════ VARIANT G — Preference Insights ══════════ -->
+<div id="vg" class="variant">
+  <div class="vg-header">
+    <h1>Preference Insights</h1>
+    <p>Inferred from your votes · Updated as you vote</p>
+  </div>
+  <div class="vg-body">
+    <div class="vg-profile" id="vg-profile"></div>
+    <div class="vg-list" id="vg-list-pane"></div>
+    <div class="vg-detail" id="vg-detail"></div>
+  </div>
+</div>
+
+<!-- ══════════ VARIANT H — Market Map ══════════ -->
+<div id="vh" class="variant">
+  <div class="vh-header">
+    <h1>Market Map</h1>
+    <div class="vh-cat-filters" id="vh-filters"></div>
+  </div>
+  <div class="vh-body">
+    <div class="vh-map" id="vh-map">
+      <div class="vh-axis-ylabel">Team Size</div>
+      <div class="vh-axis-y" id="vh-axis-y"></div>
+      <div class="vh-axis-x" id="vh-axis-x"></div>
+      <div class="vh-plot" id="vh-plot"></div>
+      <div class="vh-axis-xlabel">Company Quality →</div>
+      <div class="vh-tooltip" id="vh-tooltip"></div>
+    </div>
+    <div class="vh-detail" id="vh-detail"><div class="vh-detail-empty">Click a dot to inspect</div></div>
+  </div>
+  <div class="vh-legend" id="vh-legend"></div>
+</div>
+
+<!-- ══════════ VARIANT I — Comparison Mode ══════════ -->
+<div id="vi" class="variant">
+  <div class="vi-header">
+    <h1>Compare</h1>
+    <p>Select up to 4 companies</p>
+  </div>
+  <div class="vi-body">
+    <div class="vi-picker" id="vi-picker"></div>
+    <div class="vi-table-wrap" id="vi-table-wrap"></div>
+  </div>
+</div>
+
+<!-- ══════════ VARIANT J — Outreach Timeline ══════════ -->
+<div id="vj" class="variant">
+  <div class="vj-header">
+    <h1>Outreach</h1>
+    <div class="vj-funnel" id="vj-funnel"></div>
+  </div>
+  <div class="vj-body">
+    <div class="vj-timeline" id="vj-timeline"></div>
+    <div class="vj-sidebar" id="vj-sidebar"></div>
+  </div>
+</div>
+
+<!-- ══════════ VARIANT K — Three-pane ══════════ -->
+<div id="vk" class="variant">
+  <div class="vk-topbar">
+    <h1>Companies</h1>
+    <input class="vk-search" id="vk-search" placeholder="Search…" autocomplete="off">
+    <div class="vk-filter-pills">
+      <button class="vk-pill sel" data-filter="all">All</button>
+      <button class="vk-pill" data-filter="love">Love</button>
+      <button class="vk-pill" data-filter="like">Like</button>
+      <button class="vk-pill" data-filter="neutral">Neutral</button>
+    </div>
+  </div>
+  <div class="vk-body">
+    <div class="vk-list" id="vk-list"></div>
+    <div class="vk-detail" id="vk-detail"></div>
+    <div class="vk-insights" id="vk-insights"></div>
+  </div>
+</div>
+
+<!-- ══════════ VARIANT L — Two-pane, Detail ↔ Insights tab ══════════ -->
+<div id="vl" class="variant">
+  <div class="vl-topbar">
+    <h1>Companies</h1>
+    <div class="vl-filter-pills">
+      <button class="vl-pill sel" data-filter="all">All</button>
+      <button class="vl-pill" data-filter="love">Love</button>
+      <button class="vl-pill" data-filter="like">Like</button>
+      <button class="vl-pill" data-filter="neutral">Neutral</button>
+    </div>
+  </div>
+  <div class="vl-body">
+    <div class="vl-list" id="vl-list"></div>
+    <div class="vl-right">
+      <div class="vl-tab-bar">
+        <div class="vl-tab sel" data-tab="insights" id="vl-tab-insights">✦ Insights</div>
+        <div class="vl-tab" data-tab="detail" id="vl-tab-detail">Company Detail</div>
+      </div>
+      <div class="vl-panel sel" id="vl-panel-insights"></div>
+      <div class="vl-panel" id="vl-panel-detail"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ VARIANT M — Dashboard-first, drawer detail ══════════ -->
+<div id="vm" class="variant">
+  <div class="vm-topbar">
+    <h1>Companies</h1>
+    <div class="vm-search-trigger" id="vm-search-trigger">
+      <span>🔍</span><span>Search companies…</span><span class="vm-kbd">⌘K</span>
+    </div>
+  </div>
+  <div class="vm-body">
+    <div class="vm-main" id="vm-main"></div>
+    <div class="vm-sidebar" id="vm-sidebar"></div>
+  </div>
+  <div class="vm-drawer" id="vm-drawer">
+    <div class="vm-drawer-topbar">
+      <span class="vm-drawer-title" id="vm-drawer-title"></span>
+      <button class="vm-drawer-close" id="vm-drawer-close">×</button>
+    </div>
+    <div class="vm-drawer-body" id="vm-drawer-body"></div>
+  </div>
+  <div class="vm-palette-overlay" id="vm-palette">
+    <div class="vm-palette">
+      <input class="vm-palette-input" id="vm-palette-input" placeholder="Search companies…" autocomplete="off">
+      <div class="vm-palette-results" id="vm-palette-results"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ SWITCHER ══════════ -->
+<div id="switcher">
+  <button id="sw-prev">←</button>
+  <span id="sw-label"></span>
+  <button id="sw-next">→</button>
+</div>
+
+<script>
+// ── Data ──
+const companies = [
+  { name:"Luminai",     vote:"love",      stage:"Interviewing",   location:"SF",         employees:"~50",    link:"https://luminai.com",    ai_category:"enterprise AI automation", company_quality:5, last_outreach:"2026-05-20", notes:"$47M raised (a16z lead Series A, Feb 2026). Automation platform for enterprise workflows — screen-level AI agents that can operate any software via UI. Strong ops + enterprise angle." },
+  { name:"Braintrust",  vote:"like",      stage:null,             location:"SF",         employees:"~100",   link:"https://braintrust.dev", ai_category:"ai tooling layer",         company_quality:5, last_outreach:null,         notes:"$124M total raised; $80M Series B at $800M valuation (Feb 2026). ICONIQ lead, a16z, Greylock, Elad Gil. YC alumni. End-to-end LLM eval, logging, and observability platform for teams building AI apps." },
+  { name:"Patronus AI", vote:"like",      stage:null,             location:"SF",         employees:"~30",    link:"https://patronus.ai",    ai_category:"ai safety / eval",         company_quality:4, last_outreach:"2026-05-10", notes:"YC W23. $17M Series A (Lightspeed). Automated LLM evaluation and red-teaming platform. Competes with Braintrust, Scale AI's eval work. Tight team, strong research cred." },
+  { name:"Arena",       vote:"like",      stage:null,             location:"SF",         employees:"~20",    link:"https://arena.im",       ai_category:"ai eval / RLHF",           company_quality:4, last_outreach:"2026-04-28", notes:"Berkeley-adjacent. LMSYS Chatbot Arena spinout. Human preference data at scale. Foundational to how models are ranked today — Elo leaderboard. Seed stage, small team." },
+  { name:"Factory",     vote:"like",      stage:"Outreached",     location:"SF",         employees:"~40",    link:"https://factory.ai",     ai_category:"ai coding agents",         company_quality:4, last_outreach:"2026-05-15", notes:"$52.5M raised (Sequoia-led Series A). Autonomous software engineering agents — Droids that do code review, migrations, issue resolution. Direct Devin/SWE-agent competitor." },
+  { name:"Baseten",     vote:"neutral",   stage:null,             location:"SF",         employees:"~80",    link:"https://baseten.co",     ai_category:"ml infra",                 company_quality:4, last_outreach:null,         notes:"$75M raised. Model inference infrastructure — GPU-backed deployments, fast cold starts. Powers a lot of AI startups' inference layer quietly." },
+  { name:"Arize AI",    vote:"neutral",   stage:null,             location:"SF/Remote",  employees:"~100",   link:"https://arize.com",      ai_category:"ml observability",         company_quality:3, last_outreach:null,         notes:"ML observability and LLM tracing. Phoenix open-source project getting traction. Solid team, but competitive space (Datadog, Honeycomb moving in)." },
+  { name:"Surge AI",    vote:"neutral",   stage:null,             location:"SF",         employees:"~30",    link:"https://surgehq.ai",     ai_category:"data labeling",            company_quality:3, last_outreach:null,         notes:"High-quality human data labeling for RLHF. Founded by ex-Robinhood. Competes with Scale AI but more boutique. Less certain about ceiling." },
+  { name:"Ambrook",     vote:"neutral",   stage:"Rejected Offer", location:"Unknown",    employees:"~25",    link:"https://ambrook.com",    ai_category:"none",                     company_quality:4, last_outreach:"2026-04-07", notes:"Direct outreach from team member Apr 7. Fintech for agriculture. 7k+ customers. $26M Series A (Thrive Capital + Dylan Field). Building AI + banking products." },
+  { name:"Miter",       vote:"dislike",   stage:null,             location:"Remote",     employees:"~15",    link:"https://miter.co",       ai_category:"none",                     company_quality:2, last_outreach:null,         notes:"Meeting intelligence / notes tool. Small team. Not enough signal on growth or differentiation from the Otter/Fireflies crowd." },
+];
+
+const voteOrder = { love:0, like:1, neutral:2, not_sure_yet:3, dislike:4 };
+companies.sort((a,b) => (voteOrder[a.vote]??5)-(voteOrder[b.vote]??5));
+
+const voteColor = { love:'#10b981', like:'#3b82f6', neutral:'#9ca3af', not_sure_yet:'#f59e0b', dislike:'#ef4444' };
+const voteEmoji = { love:'♥', like:'👍', neutral:'–', not_sure_yet:'?', dislike:'✗' };
+const voteLabel = { love:'Love', like:'Like', neutral:'Neutral', not_sure_yet:'Not Sure', dislike:'Dislike' };
+
+let state = {
+  variant: 'A',
+  selected: null,
+  filter: 'all',
+  vfMode: 'all',
+  vfIndex: 0,
+  vhCatFilter: 'all',
+  viSelected: [],
+  votes: Object.fromEntries(companies.map(c=>[c.name, c.vote])),
+};
+
+const variants = ['A','B','C','D','E','F','G','H','I','J','K','L','M'];
+const variantNames = { A:'Clean Sidebar', B:'Terminal Dark', C:'Editorial', D:'Kanban Pipeline', E:'Dashboard + ⌘K', F:'Decision Queue', G:'Preference Insights', H:'Market Map', I:'Side-by-Side Compare', J:'Outreach CRM', K:'Three-pane', L:'Detail ↔ Insights', M:'Dashboard + Drawer' };
+
+function getVariantFromURL() { return new URLSearchParams(location.search).get('variant')?.toUpperCase() || 'A'; }
+function setVariantInURL(v) { const u=new URL(location.href); u.searchParams.set('variant',v); history.replaceState(null,'',u); }
+function filtered() { if(state.filter==='all') return companies; return companies.filter(c=>state.votes[c.name]===state.filter); }
+
+// ── Shared detail block helper ──
+function detailHTML(c, prefixClass, showVoteId) {
+  const v = state.votes[c.name];
+  return `
+    <div class="${prefixClass}-detail-name" style="font-size:22px;font-weight:700;margin-bottom:4px">${c.name}</div>
+    <a href="${c.link}" target="_blank" style="font-size:13px;color:#3b82f6;display:block;margin-bottom:16px">${c.link.replace('https://','')}</a>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px;font-size:13px;color:#555">
+      ${c.location?`<span><strong>Location</strong> ${c.location}</span>`:''}
+      ${c.employees?`<span><strong>Size</strong> ${c.employees}</span>`:''}
+      ${c.company_quality?`<span><strong>Quality</strong> ${'★'.repeat(c.company_quality)}${'☆'.repeat(5-c.company_quality)}</span>`:''}
+      ${c.stage?`<span><strong>Stage</strong> ${c.stage}</span>`:''}
+      ${c.ai_category&&c.ai_category!=='none'?`<span style="background:#ede9fe;color:#7c3aed;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700">${c.ai_category}</span>`:''}
+    </div>
+    ${c.notes?`<div style="font-size:13px;line-height:1.6;color:#374151;background:#f8f9fa;padding:12px;border-radius:8px;margin-bottom:16px">${c.notes}</div>`:''}
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin-bottom:8px">Your Vote</div>
+    <div id="${showVoteId}" style="display:flex;gap:6px"></div>
+  `;
+}
+function attachVoteBtns(id, cname, onUpdate) {
+  const row = document.getElementById(id);
+  if(!row) return;
+  row.innerHTML='';
+  const v=state.votes[cname];
+  ['dislike','neutral','not_sure_yet','like','love'].forEach(vv=>{
+    const btn=document.createElement('button');
+    btn.style.cssText=`flex:1;padding:8px;border-radius:8px;border:2px solid ${vv===v?'transparent':'#e5e7eb'};background:${vv===v?voteColor[vv]:'#fff'};cursor:pointer;font-size:12px;font-weight:700;color:${vv===v?'#fff':'#555'}`;
+    btn.textContent=voteLabel[vv];
+    btn.onclick=()=>{ state.votes[cname]=vv; onUpdate(); };
+    row.appendChild(btn);
+  });
+}
+
+// ══ VARIANT A ══
+function renderVA() {
+  const list=document.getElementById('va-list');
+  const det=document.getElementById('va-detail');
+  const items=filtered();
+  list.innerHTML='';
+  const groups=[
+    ['Love', items.filter(c=>state.votes[c.name]==='love')],
+    ['Like', items.filter(c=>state.votes[c.name]==='like')],
+    ['Other', items.filter(c=>!['love','like'].includes(state.votes[c.name]))],
+  ];
+  groups.forEach(([label,arr])=>{
+    if(!arr.length) return;
+    if(state.filter==='all'){const h=document.createElement('div');h.className='section-hdr';h.textContent=label;list.appendChild(h);}
+    arr.forEach(c=>{
+      const el=document.createElement('div');
+      el.className='va-item'+(state.selected===c.name?' sel':'');
+      el.innerHTML=`<div class="va-dot" style="background:${voteColor[state.votes[c.name]]||'#ccc'}"></div><span class="va-item-name">${c.name}</span>${c.ai_category&&c.ai_category!=='none'?`<span class="ai-badge">${c.ai_category}</span>`:''}`;
+      el.onclick=()=>{state.selected=c.name;renderVA();};
+      list.appendChild(el);
+    });
+  });
+  const c=companies.find(x=>x.name===state.selected);
+  if(!c){det.innerHTML='<div class="va-empty">← Select a company</div>';return;}
+  det.innerHTML=detailHTML(c,'va','va-vote-row');
+  attachVoteBtns('va-vote-row',c.name,renderVA);
+}
+
+// ══ VARIANT B ══
+function renderVB() {
+  const list=document.getElementById('vb-list');
+  const det=document.getElementById('vb-detail');
+  const items=filtered();
+  list.innerHTML='';
+  [['love','love'],['like','like'],['other','other']].forEach(([label,key])=>{
+    const arr=key==='other'?items.filter(c=>!['love','like'].includes(state.votes[c.name])):items.filter(c=>state.votes[c.name]===key);
+    if(!arr.length) return;
+    const h=document.createElement('div');h.className='vb-slabel';h.textContent='# '+label;list.appendChild(h);
+    arr.forEach(c=>{
+      const el=document.createElement('div');
+      el.className='vb-row'+(state.selected===c.name?' sel':'');
+      el.innerHTML=`<span class="vb-sym" style="color:${voteColor[state.votes[c.name]]}">${voteEmoji[state.votes[c.name]]}</span><span class="vb-name">${c.name}</span><span class="vb-tag">${c.ai_category!=='none'?c.ai_category:''}</span>`;
+      el.onclick=()=>{state.selected=c.name;renderVB();};
+      list.appendChild(el);
+    });
+  });
+  const c=companies.find(x=>x.name===state.selected);
+  if(!c){det.innerHTML='<div class="vb-empty">select a company to inspect_</div>';return;}
+  const v=state.votes[c.name];
+  det.innerHTML=`
+    <div class="vb-cmd">$ cat ${c.name.toLowerCase().replace(/ /g,'-')}.yaml</div>
+    <div class="vb-dname">${c.name}</div>
+    <div class="vb-url">${c.link}</div>
+    <div class="vb-kv">
+      <span class="vb-key">vote:</span><span class="vb-val" style="color:${voteColor[v]}">${v}</span>
+      <span class="vb-key">location:</span><span class="vb-val">${c.location||'?'}</span>
+      <span class="vb-key">employees:</span><span class="vb-val">${c.employees||'?'}</span>
+      <span class="vb-key">quality:</span><span class="vb-val">${c.company_quality}/5</span>
+      ${c.ai_category&&c.ai_category!=='none'?`<span class="vb-key">ai_category:</span><span class="vb-val" style="color:#bc8cff">${c.ai_category}</span>`:''}
+    </div>
+    ${c.notes?`<div style="font-size:11px;color:#3fb950;margin-bottom:6px"># notes</div><div class="vb-notes">${c.notes}</div>`:''}
+    <div style="font-size:11px;color:#8b949e;margin-bottom:8px"># update vote</div>
+    <div id="vb-vote-row" class="vb-vote-row"></div>
+  `;
+  const row=document.getElementById('vb-vote-row');
+  ['dislike','neutral','not_sure_yet','like','love'].forEach(vv=>{
+    const btn=document.createElement('button');btn.className='vb-vbtn'+(v===vv?' sel':'');btn.textContent=vv;
+    btn.onclick=()=>{state.votes[c.name]=vv;renderVB();};row.appendChild(btn);
+  });
+}
+
+// ══ VARIANT C ══
+function renderVC() {
+  const list=document.getElementById('vc-list');
+  const det=document.getElementById('vc-detail');
+  const items=filtered();
+  list.innerHTML='';
+  [['Love','love'],['Like','like'],['Other','other']].forEach(([label,key])=>{
+    const arr=key==='other'?items.filter(c=>!['love','like'].includes(state.votes[c.name])):items.filter(c=>state.votes[c.name]===key);
+    if(!arr.length) return;
+    const h=document.createElement('div');h.className='vc-sdivider';h.textContent=label;list.appendChild(h);
+    arr.forEach(c=>{
+      const el=document.createElement('div');
+      el.className='vc-card'+(state.selected===c.name?' sel':'');
+      el.innerHTML=`<div class="vc-card-top"><span class="vc-card-name">${c.name}</span><span class="vc-card-vote">${voteEmoji[state.votes[c.name]]||''}</span></div>${c.ai_category&&c.ai_category!=='none'?`<div class="vc-card-industry">${c.ai_category}</div>`:''}<div class="vc-card-snippet">${c.notes||''}</div>`;
+      el.onclick=()=>{state.selected=c.name;renderVC();};
+      list.appendChild(el);
+    });
+  });
+  const c=companies.find(x=>x.name===state.selected);
+  if(!c){det.innerHTML='<div class="vc-empty">Select a Company</div>';return;}
+  const v=state.votes[c.name];
+  det.innerHTML=`
+    <div class="vc-hero">
+      <div class="vc-hero-label">${c.ai_category!=='none'?c.ai_category:'Company'}</div>
+      <div class="vc-hero-name">${c.name}</div>
+      <a class="vc-hero-url" href="${c.link}" target="_blank">${c.link}</a>
+    </div>
+    <div class="vc-dbody">
+      <div class="vc-meta-grid">
+        <div class="vc-mbox"><div class="vc-mbox-label">Location</div><div class="vc-mbox-val">${c.location||'—'}</div></div>
+        <div class="vc-mbox"><div class="vc-mbox-label">Team Size</div><div class="vc-mbox-val">${c.employees||'—'}</div></div>
+        <div class="vc-mbox"><div class="vc-mbox-label">Quality</div><div class="vc-mbox-val">${'★'.repeat(c.company_quality)}${'☆'.repeat(5-c.company_quality)}</div></div>
+      </div>
+      ${c.notes?`<div class="vc-sec">Notes</div><div class="vc-notes">${c.notes}</div>`:''}
+      <div class="vc-sec">Your Vote</div>
+      <div class="vc-vote-row" id="vc-vote-row"></div>
+    </div>
+  `;
+  const row=document.getElementById('vc-vote-row');
+  ['dislike','neutral','not_sure_yet','like','love'].forEach(vv=>{
+    const btn=document.createElement('button');btn.className='vc-vbtn'+(v===vv?' sel':'');btn.textContent=voteLabel[vv];
+    btn.onclick=()=>{state.votes[c.name]=vv;renderVC();};row.appendChild(btn);
+  });
+}
+
+// ══ VARIANT D — Kanban ══
+const STAGES = ['Discovered','Outreached','Interviewing','Offer','Closed'];
+const stageColors = { Discovered:'#64748b', Outreached:'#0ea5e9', Interviewing:'#8b5cf6', Offer:'#10b981', Closed:'#ef4444' };
+function companyStage(c) {
+  if(!c.stage) return 'Discovered';
+  if(c.stage==='Rejected Offer') return 'Closed';
+  return c.stage;
+}
+function renderVD() {
+  const board=document.getElementById('vd-board');
+  board.innerHTML='';
+  STAGES.forEach(stage=>{
+    const cols=companies.filter(c=>companyStage(c)===stage);
+    const col=document.createElement('div');col.className='vd-col';
+    col.innerHTML=`<div class="vd-col-hdr" style="color:${stageColors[stage]}">${stage}<span class="vd-col-count">${cols.length}</span></div>`;
+    const cards=document.createElement('div');cards.className='vd-cards';
+    cols.forEach(c=>{
+      const card=document.createElement('div');card.className='vd-card'+(state.selected===c.name?' sel':'');
+      card.innerHTML=`<div class="vd-card-name">${c.name}</div><div class="vd-card-meta"><div class="vd-dot" style="width:8px;height:8px;border-radius:50%;background:${voteColor[state.votes[c.name]]||'#ccc'};flex-shrink:0"></div>${c.ai_category&&c.ai_category!=='none'?`<span class="vd-card-cat">${c.ai_category}</span>`:''}</div>`;
+      card.onclick=()=>{state.selected=c.name;openDrawer(c);};
+      cards.appendChild(card);
+    });
+    const addBtn=document.createElement('button');addBtn.className='vd-add-btn';addBtn.textContent='+ Add company';
+    cards.appendChild(addBtn);
+    col.appendChild(cards);board.appendChild(col);
+  });
+}
+function openDrawer(c) {
+  const drawer=document.getElementById('vd-drawer');
+  const content=document.getElementById('vd-drawer-content');
+  const v=state.votes[c.name];
+  content.innerHTML=`
+    <div class="vd-drawer-name">${c.name}</div>
+    <a class="vd-drawer-url" href="${c.link}" target="_blank">${c.link.replace('https://','')}</a>
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin-bottom:8px">Move to stage</div>
+    <div class="vd-move-row" id="vd-move-row"></div>
+    ${c.notes?`<div class="vd-notes">${c.notes}</div>`:''}
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin-bottom:8px">Vote</div>
+    <div id="vd-vote-row" class="vd-vote-row"></div>
+    <div style="margin-top:20px;padding-top:20px;border-top:1px solid #e2e8f0">
+      <button style="width:100%;padding:10px;border:1px dashed #cbd5e1;border-radius:8px;background:none;cursor:pointer;font-size:13px;color:#94a3b8;margin-bottom:8px">📝 Add note…</button>
+      <button style="width:100%;padding:10px;border:1px dashed #cbd5e1;border-radius:8px;background:none;cursor:pointer;font-size:13px;color:#94a3b8">📅 Set follow-up…</button>
+    </div>
+  `;
+  const moveRow=content.querySelector('#vd-move-row');
+  STAGES.forEach(s=>{
+    const btn=document.createElement('button');btn.className='vd-move-btn'+(companyStage(c)===s?' vd-move-cur':'');btn.textContent=s;
+    btn.onclick=()=>{/* not wired */};moveRow.appendChild(btn);
+  });
+  attachVoteBtns('vd-vote-row',c.name,()=>{renderVD();openDrawer(c);});
+  drawer.classList.add('open');
+}
+document.getElementById('vd-drawer-close').onclick=()=>{
+  document.getElementById('vd-drawer').classList.remove('open');
+  state.selected=null;
+};
+
+// ══ VARIANT E — Dashboard + Command Palette ══
+function computeInsights() {
+  const voted=companies.filter(c=>['love','like'].includes(state.votes[c.name]));
+  const cats={};
+  voted.forEach(c=>{if(c.ai_category&&c.ai_category!=='none'){cats[c.ai_category]=(cats[c.ai_category]||0)+1;}});
+  const topCats=Object.entries(cats).sort((a,b)=>b[1]-a[1]).slice(0,3).map(e=>e[0]);
+  const loveLoc=companies.filter(c=>state.votes[c.name]==='love').map(c=>c.location).filter(Boolean);
+  const topLoc=Object.entries(loveLoc.reduce((a,l)=>{a[l]=(a[l]||0)+1;return a},{})).sort((a,b)=>b[1]-a[1])[0]?.[0];
+  const likedSizes=voted.map(c=>c.employees).filter(Boolean);
+  return {topCats, topLoc, likedSizes, totalLiked:voted.length, total:companies.length};
+}
+function renderVE() {
+  const main=document.getElementById('ve-main');
+  const sidebar=document.getElementById('ve-sidebar');
+  const ins=computeInsights();
+  const love=companies.filter(c=>state.votes[c.name]==='love');
+  const like=companies.filter(c=>state.votes[c.name]==='like');
+  const active=companies.filter(c=>c.stage&&!['Rejected Offer'].includes(c.stage));
+  const catCounts={};
+  companies.forEach(c=>{if(c.ai_category&&c.ai_category!=='none'){catCounts[c.ai_category]=(catCounts[c.ai_category]||0)+1;}});
+  const maxCat=Math.max(...Object.values(catCounts));
+  main.innerHTML=`
+    <div class="ve-stats">
+      <div class="ve-stat"><div class="ve-stat-n">${companies.length}</div><div class="ve-stat-label">Companies tracked</div></div>
+      <div class="ve-stat"><div class="ve-stat-n" style="color:#10b981">${love.length}</div><div class="ve-stat-label">Loved</div><div class="ve-stat-sub">${like.length} liked</div></div>
+      <div class="ve-stat"><div class="ve-stat-n" style="color:#3b82f6">${active.length}</div><div class="ve-stat-label">In pipeline</div><div class="ve-stat-sub">active processes</div></div>
+      <div class="ve-stat"><div class="ve-stat-n" style="color:#8b5cf6">${ins.totalLiked}</div><div class="ve-stat-label">Strong signals</div><div class="ve-stat-sub">love + like</div></div>
+    </div>
+    <div class="ve-section-title">Companies by AI Focus</div>
+    <div class="ve-cats">
+      ${Object.entries(catCounts).sort((a,b)=>b[1]-a[1]).map(([cat,n])=>`
+        <div class="ve-cat-row">
+          <span class="ve-cat-label">${cat}</span>
+          <div class="ve-cat-bar-bg"><div class="ve-cat-bar" style="width:${(n/maxCat*100).toFixed(0)}%"></div></div>
+          <span class="ve-cat-count">${n}</span>
+        </div>
+      `).join('')}
+    </div>
+    <div class="ve-section-title">Recent Activity</div>
+    <div class="ve-recent">
+      ${companies.filter(c=>c.last_outreach).sort((a,b)=>b.last_outreach.localeCompare(a.last_outreach)).slice(0,5).map(c=>`
+        <div class="ve-recent-row">
+          <div class="ve-recent-icon" style="background:${voteColor[state.votes[c.name]]}22;color:${voteColor[state.votes[c.name]]}">${voteEmoji[state.votes[c.name]]}</div>
+          <span class="ve-recent-name">${c.name}</span>
+          <span class="ve-recent-action">${c.stage||'Contacted'} · ${c.last_outreach}</span>
+        </div>
+      `).join('')}
+    </div>
+  `;
+  sidebar.innerHTML=`
+    <div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:14px">Insights</div>
+    ${ins.topCats.length?`<div class="ve-insight"><div class="ve-insight-title">🎯 Strong pattern</div><div class="ve-insight-body">You consistently favor <strong>${ins.topCats[0]}</strong> companies. ${ins.topCats[1]?`Also interested in ${ins.topCats[1]}.`:''}</div></div>`:''}
+    ${ins.topLoc?`<div class="ve-insight info"><div class="ve-insight-title">📍 Location preference</div><div class="ve-insight-body">Your loved companies cluster in <strong>${ins.topLoc}</strong>. Consider filtering your search accordingly.</div></div>`:''}
+    <div class="ve-insight warn"><div class="ve-insight-title">⏳ Follow-up needed</div><div class="ve-insight-body">${companies.filter(c=>!c.last_outreach&&state.votes[c.name]==='like').length} liked companies haven't been contacted yet.</div></div>
+    <div class="ve-insight info"><div class="ve-insight-title">💡 Suggestion</div><div class="ve-insight-body">Based on your preferences, you might like companies in the <strong>ai safety / eval</strong> space. <a href="#" style="color:#1d4ed8">Discover more →</a></div></div>
+    <div style="margin-top:20px;font-size:13px;font-weight:700;color:#374151;margin-bottom:10px">By Vote</div>
+    ${['love','like','neutral','dislike'].map(v=>`
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:13px">
+        <div style="width:10px;height:10px;border-radius:50%;background:${voteColor[v]}"></div>
+        <span style="flex:1;color:#374151">${voteLabel[v]}</span>
+        <span style="font-weight:700;color:#111">${companies.filter(c=>state.votes[c.name]===v).length}</span>
+      </div>
+    `).join('')}
+  `;
+}
+function renderVEPalette(query) {
+  const results=document.getElementById('ve-palette-results');
+  const q=query.toLowerCase();
+  const matches=q?companies.filter(c=>c.name.toLowerCase().includes(q)||c.ai_category.toLowerCase().includes(q)||c.notes.toLowerCase().includes(q)):companies;
+  if(!matches.length){results.innerHTML='<div class="ve-palette-empty">No results</div>';return;}
+  results.innerHTML='';
+  matches.forEach((c,i)=>{
+    const el=document.createElement('div');el.className='ve-palette-item'+(i===0?' focused':'');
+    el.innerHTML=`<div style="width:8px;height:8px;border-radius:50%;background:${voteColor[state.votes[c.name]]};flex-shrink:0"></div><span class="ve-palette-item-name">${c.name}</span><span class="ve-palette-item-meta">${c.ai_category!=='none'?c.ai_category:''} ${c.stage||''}</span>`;
+    el.onclick=()=>{ state.selected=c.name; document.getElementById('ve-palette').classList.remove('open'); };
+    results.appendChild(el);
+  });
+}
+document.getElementById('ve-search-trigger').onclick=()=>{
+  document.getElementById('ve-palette').classList.add('open');
+  document.getElementById('ve-palette-input').focus();
+  renderVEPalette('');
+};
+document.getElementById('ve-palette').onclick=(e)=>{if(e.target===document.getElementById('ve-palette')) document.getElementById('ve-palette').classList.remove('open');};
+document.getElementById('ve-palette-input').oninput=(e)=>renderVEPalette(e.target.value);
+document.addEventListener('keydown',(e)=>{
+  if((e.metaKey||e.ctrlKey)&&e.key==='k'&&state.variant==='E'){e.preventDefault();document.getElementById('ve-palette').classList.toggle('open');document.getElementById('ve-palette-input').focus();renderVEPalette('');}
+  if(e.key==='Escape') document.getElementById('ve-palette').classList.remove('open');
+});
+
+// ══ VARIANT F — Decision Queue ══
+function vfQueue() {
+  if(state.vfMode==='unvoted') return companies.filter(c=>!state.votes[c.name]||state.votes[c.name]==='not_sure_yet');
+  if(state.vfMode==='revisit') return companies.filter(c=>['like','love'].includes(state.votes[c.name]));
+  return companies;
+}
+function renderVF() {
+  const wrap=document.getElementById('vf-body-wrap');
+  const queue=vfQueue();
+  const idx=Math.min(state.vfIndex, queue.length-1);
+  const pct=queue.length?Math.round(((idx+1)/queue.length)*100):100;
+  document.getElementById('vf-progress-label').textContent=`${idx+1} of ${queue.length}`;
+  document.getElementById('vf-progress-bar').style.width=pct+'%';
+
+  document.querySelectorAll('.vf-mode-btn').forEach(btn=>{
+    btn.classList.toggle('sel',btn.dataset.mode===state.vfMode);
+  });
+
+  if(!queue.length){
+    wrap.innerHTML='<div class="vf-empty"><div class="vf-empty-icon">✓</div><div class="vf-empty-text">All done!</div><div class="vf-empty-sub">No companies to triage in this mode.</div></div>';
+    return;
+  }
+  const c=queue[idx];
+  const v=state.votes[c.name];
+  wrap.innerHTML=`
+    <div class="vf-body">
+      <div class="vf-card">
+        <div class="vf-card-hero">
+          ${c.ai_category&&c.ai_category!=='none'?`<div class="vf-card-cat">${c.ai_category}</div>`:''}
+          <div class="vf-card-name">${c.name}</div>
+          <a class="vf-card-url" href="${c.link}" target="_blank">${c.link.replace('https://','')}</a>
+        </div>
+        <div class="vf-card-meta">
+          ${c.location?`<span class="vf-meta-item"><strong>Location</strong> ${c.location}</span>`:''}
+          ${c.employees?`<span class="vf-meta-item"><strong>Size</strong> ${c.employees}</span>`:''}
+          ${c.company_quality?`<span class="vf-meta-item"><strong>Quality</strong> ${'★'.repeat(c.company_quality)}</span>`:''}
+        </div>
+        ${c.notes?`<div class="vf-card-notes">${c.notes}</div>`:''}
+        <div class="vf-actions">
+          <div class="vf-vote-row" id="vf-vote-row"></div>
+          <div class="vf-skip-row">
+            <button class="vf-skip-btn" id="vf-prev-btn">← Prev</button>
+            <span class="vf-kbd-hint">1=Dislike  2=Neutral  3=Like  4=Love  →=Skip</span>
+            <button class="vf-skip-btn" id="vf-next-btn">Skip →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  const row=document.getElementById('vf-vote-row');
+  ['dislike','neutral','like','love'].forEach((vv,i)=>{
+    const btn=document.createElement('button');btn.className='vf-vbtn'+(v===vv?' sel':'');
+    btn.style.cssText=v===vv?`background:${voteColor[vv]};border-color:transparent;color:#fff`:'';
+    btn.innerHTML=`<div style="font-size:18px">${voteEmoji[vv]}</div><div style="font-size:12px">${voteLabel[vv]}</div><div style="font-size:10px;color:${v===vv?'rgba(255,255,255,.7)':'#9ca3af'}">[${i+1}]</div>`;
+    btn.onclick=()=>{ state.votes[c.name]=vv; if(idx<queue.length-1) state.vfIndex=idx+1; renderVF(); };
+    row.appendChild(btn);
+  });
+  document.getElementById('vf-prev-btn').onclick=()=>{if(idx>0){state.vfIndex=idx-1;renderVF();}};
+  document.getElementById('vf-next-btn').onclick=()=>{if(idx<queue.length-1){state.vfIndex=idx+1;renderVF();}};
+}
+document.querySelectorAll('.vf-mode-btn').forEach(btn=>{
+  btn.onclick=()=>{state.vfMode=btn.dataset.mode;state.vfIndex=0;renderVF();};
+});
+document.addEventListener('keydown',(e)=>{
+  if(state.variant!=='F') return;
+  const tag=document.activeElement?.tagName;
+  if(['INPUT','TEXTAREA'].includes(tag)) return;
+  const map={'1':'dislike','2':'neutral','3':'like','4':'love'};
+  if(map[e.key]){
+    const q=vfQueue();const c=q[Math.min(state.vfIndex,q.length-1)];
+    if(c){state.votes[c.name]=map[e.key];if(state.vfIndex<q.length-1)state.vfIndex++;renderVF();}
+  }
+});
+
+// ══ VARIANT G — Preference Insights ══
+function computePrefs() {
+  const loved=companies.filter(c=>state.votes[c.name]==='love');
+  const liked=companies.filter(c=>state.votes[c.name]==='like');
+  const strong=[...loved,...liked];
+  const catScore={};
+  strong.forEach(c=>{if(c.ai_category&&c.ai_category!=='none') catScore[c.ai_category]=(catScore[c.ai_category]||0)+(state.votes[c.name]==='love'?2:1);});
+  const locScore={};
+  strong.forEach(c=>{if(c.location) locScore[c.location]=(locScore[c.location]||0)+1;});
+  const sizeGroups={'<30':0,'30-80':0,'80+':0};
+  strong.forEach(c=>{
+    const n=parseInt(c.employees?.replace(/[^0-9]/g,''));
+    if(!n) return;
+    if(n<30) sizeGroups['<30']++;
+    else if(n<80) sizeGroups['30-80']++;
+    else sizeGroups['80+']++;
+  });
+  return {catScore, locScore, sizeGroups};
+}
+function matchScore(c, prefs) {
+  let score=0, reasons=[];
+  const v=state.votes[c.name];
+  if(v==='love'){score+=40;reasons.push('you love this company');}
+  else if(v==='like'){score+=20;reasons.push('you liked this company');}
+  if(c.ai_category&&prefs.catScore[c.ai_category]){score+=prefs.catScore[c.ai_category]*15;reasons.push(`matches ${c.ai_category} preference`);}
+  if(c.location&&prefs.locScore[c.location]){score+=prefs.locScore[c.location]*10;reasons.push(`${c.location} fits your pattern`);}
+  const n=parseInt(c.employees?.replace(/[^0-9]/g,''));
+  if(n){
+    const bestSize=Object.entries(prefs.sizeGroups).sort((a,b)=>b[1]-a[1])[0]?.[0];
+    const inGroup=(bestSize==='<30'&&n<30)||(bestSize==='30-80'&&n>=30&&n<80)||(bestSize==='80+'&&n>=80);
+    if(inGroup){score+=10;reasons.push('team size fits preference');}
+  }
+  return {score:Math.min(score,99), reasons};
+}
+function renderVG() {
+  const prefs=computePrefs();
+  const profile=document.getElementById('vg-profile');
+  const listPane=document.getElementById('vg-list-pane');
+  const det=document.getElementById('vg-detail');
+
+  profile.innerHTML=`
+    <div class="vg-profile-title">Your Profile</div>
+    <div class="vg-pref-section">
+      <div class="vg-pref-label">Favorite spaces</div>
+      ${Object.entries(prefs.catScore).sort((a,b)=>b[1]-a[1]).map(([cat,s])=>`<span class="vg-pref-tag ${s>=3?'strong':''}">${cat}</span>`).join('')||'<span style="font-size:12px;color:#9ca3af">Vote more companies to learn</span>'}
+    </div>
+    <div class="vg-pref-section">
+      <div class="vg-pref-label">Location</div>
+      ${Object.entries(prefs.locScore).sort((a,b)=>b[1]-a[1]).map(([loc,s])=>`<span class="vg-pref-tag ${s>=2?'strong':''}">${loc}</span>`).join('')||'<span style="font-size:12px;color:#9ca3af">—</span>'}
+    </div>
+    <div class="vg-pref-section">
+      <div class="vg-pref-label">Team size</div>
+      ${Object.entries(prefs.sizeGroups).filter(([,n])=>n>0).sort((a,b)=>b[1]-a[1]).map(([size,n])=>`<span class="vg-pref-tag">${size} employees (${n})</span>`).join('')||'<span style="font-size:12px;color:#9ca3af">—</span>'}
+    </div>
+    <button class="vg-discover-btn">✦ Discover more companies →</button>
+    <div style="font-size:11px;color:#9ca3af;text-align:center;margin-top:8px">Uses your vote history to find new matches</div>
+  `;
+
+  const ranked=[...companies].map(c=>({c,ms:matchScore(c,prefs)})).sort((a,b)=>b.ms.score-a.ms.score);
+  listPane.innerHTML=`<div class="vg-list-title">Companies ranked by match</div>`;
+  ranked.forEach(({c,ms})=>{
+    const v=state.votes[c.name];
+    const hue=ms.score>=70?'#10b981':ms.score>=40?'#3b82f6':'#9ca3af';
+    const el=document.createElement('div');
+    el.className='vg-row'+(state.selected===c.name?' sel':'');
+    el.innerHTML=`
+      <div class="vg-score-ring" style="background:${hue}22;color:${hue};border:2px solid ${hue}">${ms.score}</div>
+      <div class="vg-row-info">
+        <div class="vg-row-name">${c.name}</div>
+        <div class="vg-row-why">${ms.reasons.slice(0,2).join(' · ')||'no match signal yet'}</div>
+      </div>
+      <div class="vg-row-vote" style="background:${voteColor[v]||'#e5e7eb'}22;color:${voteColor[v]||'#9ca3af'}">${voteLabel[v]||'—'}</div>
+    `;
+    el.onclick=()=>{state.selected=c.name;renderVG();};
+    listPane.appendChild(el);
+  });
+
+  const c=companies.find(x=>x.name===state.selected);
+  if(!c){det.innerHTML='<div class="vg-detail-empty">← Select for breakdown</div>';return;}
+  const ms=matchScore(c,prefs);
+  det.innerHTML=`
+    <div class="vg-detail-name">${c.name}</div>
+    <div class="vg-match-breakdown">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin-bottom:8px">Match breakdown</div>
+      ${ms.reasons.map(r=>`<div class="vg-match-row"><span>${r}</span><span class="vg-match-check">✓</span></div>`).join('')}
+      ${ms.score<50?`<div class="vg-match-row" style="color:#9ca3af"><span>limited preference overlap</span><span class="vg-match-x">—</span></div>`:''}
+    </div>
+    <div class="vg-notes-small">${c.notes||''}</div>
+  `;
+  attachVoteBtns('vg-vote-inline',c.name,renderVG);
+}
+
+// ══ VARIANT H — Market Map ══
+const sizeLabel=['Unknown','<20','20-50','50-100','100+'];
+function sizeY(c){
+  const n=parseInt(c.employees?.replace(/[^0-9]/g,''));
+  if(!n) return 0;
+  if(n<20) return 1;
+  if(n<50) return 2;
+  if(n<100) return 3;
+  return 4;
+}
+function renderVH() {
+  const plot=document.getElementById('vh-plot');
+  const det=document.getElementById('vh-detail');
+  const filters=document.getElementById('vh-filters');
+  const axY=document.getElementById('vh-axis-y');
+  const axX=document.getElementById('vh-axis-x');
+  const legend=document.getElementById('vh-legend');
+
+  const cats=['all',...[...new Set(companies.map(c=>c.ai_category).filter(x=>x&&x!=='none'))]];
+  filters.innerHTML='';
+  cats.forEach(cat=>{
+    const btn=document.createElement('button');btn.className='vh-cf'+(state.vhCatFilter===cat?' sel':'');
+    btn.textContent=cat==='all'?'All':cat;
+    btn.onclick=()=>{state.vhCatFilter=cat;renderVH();};
+    filters.appendChild(btn);
+  });
+
+  axY.innerHTML=sizeLabel.slice().reverse().map(l=>`<span>${l}</span>`).join('');
+  axX.innerHTML=['1','2','3','4','5'].map(n=>`<span>${n}</span>`).join('');
+  legend.innerHTML=['love','like','neutral','dislike'].map(v=>`<div class="vh-legend-item"><div class="vh-legend-dot" style="background:${voteColor[v]}"></div>${voteLabel[v]}</div>`).join('');
+
+  plot.innerHTML='';
+  // grid lines
+  [1,2,3,4].forEach(i=>{
+    const h=document.createElement('div');h.className='vh-grid-h';h.style.top=`${(i/4)*100}%`;plot.appendChild(h);
+    const v=document.createElement('div');v.className='vh-grid-v';v.style.left=`${(i/4)*100}%`;plot.appendChild(v);
+  });
+
+  const visible=companies.filter(c=>state.vhCatFilter==='all'||c.ai_category===state.vhCatFilter);
+  const tooltip=document.getElementById('vh-tooltip');
+
+  visible.forEach(c=>{
+    const xPct=((c.company_quality-1)/4)*90+5;
+    const yPct=(1-(sizeY(c)/4))*90+5;
+    const dot=document.createElement('div');dot.className='vh-dot'+(state.selected===c.name?' sel':'');
+    dot.style.cssText=`left:${xPct}%;top:${yPct}%;width:28px;height:28px;background:${voteColor[state.votes[c.name]]||'#9ca3af'}`;
+    dot.textContent=c.name[0];
+    dot.onmouseenter=(e)=>{
+      tooltip.style.display='block';
+      tooltip.style.left=`${xPct+3}%`;tooltip.style.top=`${yPct-8}%`;
+      tooltip.textContent=`${c.name} · ${voteLabel[state.votes[c.name]]} · Q${c.company_quality}`;
+    };
+    dot.onmouseleave=()=>{tooltip.style.display='none';};
+    dot.onclick=()=>{state.selected=c.name;renderVH();};
+    plot.appendChild(dot);
+  });
+
+  const c=companies.find(x=>x.name===state.selected);
+  if(!c){det.innerHTML='<div class="vh-detail-empty">Click a dot to inspect</div>';return;}
+  det.innerHTML=detailHTML(c,'vh','vh-vote-row');
+  attachVoteBtns('vh-vote-row',c.name,renderVH);
+}
+
+// ══ VARIANT I — Comparison ══
+function renderVI() {
+  const picker=document.getElementById('vi-picker');
+  const tableWrap=document.getElementById('vi-table-wrap');
+  picker.innerHTML='<div class="vi-pick-hdr">Select companies</div>';
+  companies.forEach(c=>{
+    const checked=state.viSelected.includes(c.name);
+    const el=document.createElement('div');el.className='vi-pick-item';
+    el.innerHTML=`<div class="vi-checkbox ${checked?'checked':''}">${checked?'✓':''}</div><span class="vi-pick-name">${c.name}</span><span class="vi-pick-vote">${voteEmoji[state.votes[c.name]]||''}</span>`;
+    el.onclick=()=>{
+      if(checked) state.viSelected=state.viSelected.filter(n=>n!==c.name);
+      else if(state.viSelected.length<4) state.viSelected.push(c.name);
+      renderVI();
+    };
+    picker.appendChild(el);
+  });
+
+  if(state.viSelected.length<2){
+    tableWrap.innerHTML='<div class="vi-empty"><span style="font-size:32px">⬅</span><span>Select 2–4 companies to compare</span></div>';
+    return;
+  }
+  const sel=state.viSelected.map(n=>companies.find(c=>c.name===n));
+  const rows=[
+    ['Vote', c=>{ const v=state.votes[c.name]; return `<span style="color:${voteColor[v]};font-weight:700">${voteEmoji[v]} ${voteLabel[v]}</span>`; }],
+    ['Location', c=>c.location||'—'],
+    ['Team Size', c=>c.employees||'—'],
+    ['Quality', c=>'★'.repeat(c.company_quality)+'☆'.repeat(5-c.company_quality)],
+    ['Stage', c=>c.stage||'—'],
+    ['AI Focus', c=>c.ai_category&&c.ai_category!=='none'?`<span style="background:#ede9fe;color:#7c3aed;padding:2px 6px;border-radius:4px;font-size:11px">${c.ai_category}</span>`:'—'],
+    ['Notes', c=>`<div style="font-size:12px;line-height:1.4;max-height:60px;overflow:hidden;color:#6b7280">${c.notes||'—'}</div>`],
+  ];
+  // Best pick: highest voteOrder + quality
+  const bestName=sel.slice().sort((a,b)=>(voteOrder[state.votes[a.name]]??5)-(voteOrder[state.votes[b.name]]??5)||(b.company_quality-a.company_quality))[0].name;
+  let html=`<table class="vi-table"><thead><tr><th></th>${sel.map(c=>`<th>${c.name}${c.name===bestName?'<span class="vi-best-badge">Best fit</span>':''}</th>`).join('')}</tr></thead><tbody>`;
+  rows.forEach(([label,fn])=>{
+    html+=`<tr><td>${label}</td>${sel.map(c=>`<td>${fn(c)}</td>`).join('')}</tr>`;
+  });
+  // Summary row
+  html+=`<tr class="vi-winner-row"><td>Recommendation</td>${sel.map(c=>`<td>${c.name===bestName?'✓ Top pick':'—'}</td>`).join('')}</tr>`;
+  html+=`</tbody></table>`;
+  tableWrap.innerHTML=html;
+}
+
+// ══ VARIANT J — Outreach Timeline ══
+function renderVJ() {
+  const timeline=document.getElementById('vj-timeline');
+  const sidebar=document.getElementById('vj-sidebar');
+  const funnel=document.getElementById('vj-funnel');
+
+  const stageCounts={Discovered:0,Outreached:0,Interviewing:0,Offer:0,Closed:0};
+  companies.forEach(c=>{ const s=companyStage(c); if(stageCounts[s]!==undefined) stageCounts[s]++; });
+  funnel.innerHTML=Object.entries(stageCounts).map(([s,n])=>`<div class="vj-funnel-step"><span class="vj-funnel-n">${n}</span><span class="vj-funnel-label">${s}</span></div>`).join('');
+
+  const today=new Date('2026-06-03');
+  function daysSince(d){if(!d) return null;return Math.floor((today-new Date(d))/86400000);}
+
+  const overdue=companies.filter(c=>c.last_outreach&&daysSince(c.last_outreach)>21&&!['Closed'].includes(companyStage(c))&&['love','like'].includes(state.votes[c.name]));
+  const contacted=companies.filter(c=>c.last_outreach&&!overdue.includes(c)).sort((a,b)=>b.last_outreach.localeCompare(a.last_outreach));
+  const untouched=companies.filter(c=>!c.last_outreach&&state.votes[c.name]!=='dislike');
+
+  function makeEntry(c){
+    const ds=daysSince(c.last_outreach);
+    const el=document.createElement('div');
+    el.className='vj-entry'+(state.selected===c.name?' sel':'')+(overdue.includes(c)?' overdue':'');
+    el.innerHTML=`
+      <div class="vj-entry-dot" style="background:${voteColor[state.votes[c.name]]||'#ccc'}"></div>
+      <div class="vj-entry-main">
+        <div class="vj-entry-name">${c.name}</div>
+        <div class="vj-entry-stage">${companyStage(c)}${c.ai_category&&c.ai_category!=='none'?' · '+c.ai_category:''}</div>
+        <div class="vj-entry-actions">
+          <button class="vj-action-btn primary">📧 Follow up</button>
+          <button class="vj-action-btn">📝 Add note</button>
+          <button class="vj-action-btn">📅 Remind me</button>
+        </div>
+      </div>
+      <div class="vj-entry-date">${ds!==null?(ds===0?'Today':ds===1?'Yesterday':ds+' days ago'):'Not contacted'}</div>
+    `;
+    el.onclick=()=>{state.selected=c.name;renderVJ();};
+    return el;
+  }
+
+  timeline.innerHTML='';
+  function addSection(title,items){
+    if(!items.length) return;
+    const hdr=document.createElement('div');hdr.className='vj-section-title';hdr.textContent=title;
+    timeline.appendChild(hdr);
+    items.forEach(c=>timeline.appendChild(makeEntry(c)));
+  }
+  addSection('⚠ Follow-up overdue',overdue);
+  addSection('Recently contacted',contacted);
+  addSection('Not yet contacted',untouched);
+
+  // Sidebar: activity feed + selected detail
+  const c=companies.find(x=>x.name===state.selected);
+  sidebar.innerHTML=`
+    <div class="vj-sidebar-title">Activity Feed</div>
+    ${[
+      {icon:'📧',text:'Followed up with Luminai',time:'2 days ago'},
+      {icon:'✅',text:'Voted Factory as Like',time:'3 days ago'},
+      {icon:'📞',text:'Intro call — Patronus AI',time:'1 week ago'},
+      {icon:'🔍',text:'Discovered Braintrust',time:'2 weeks ago'},
+      {icon:'📝',text:'Added notes — Arize AI',time:'3 weeks ago'},
+    ].map(a=>`<div class="vj-activity-item"><div class="vj-activity-icon">${a.icon}</div><div><div class="vj-activity-text">${a.text}</div><div class="vj-activity-time">${a.time}</div></div></div>`).join('')}
+    ${c?`
+      <div class="vj-detail-pane">
+        <div class="vj-detail-name">${c.name}</div>
+        <div class="vj-detail-notes">${c.notes||''}</div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin-bottom:8px">Vote</div>
+        <div id="vj-vote-row" class="vj-detail-vote-row"></div>
+      </div>
+    `:''}
+  `;
+  if(c) attachVoteBtns('vj-vote-row',c.name,renderVJ);
+}
+
+// ══ VARIANT K — Three-pane ══
+function renderVK() {
+  const list = document.getElementById('vk-list');
+  const det = document.getElementById('vk-detail');
+  const ins = document.getElementById('vk-insights');
+  const query = document.getElementById('vk-search')?.value.toLowerCase() || '';
+
+  // List
+  list.innerHTML = '';
+  const items = filtered().filter(c => !query || c.name.toLowerCase().includes(query) || c.ai_category.toLowerCase().includes(query));
+  [['Love','love'],['Like','like'],['Other','other']].forEach(([label,key]) => {
+    const arr = key === 'other' ? items.filter(c => !['love','like'].includes(state.votes[c.name])) : items.filter(c => state.votes[c.name] === key);
+    if (!arr.length) return;
+    const h = document.createElement('div'); h.className = 'vk-list-hdr'; h.textContent = label; list.appendChild(h);
+    arr.forEach(c => {
+      const el = document.createElement('div'); el.className = 'vk-list-item' + (state.selected === c.name ? ' sel' : '');
+      el.innerHTML = `<div class="vk-list-dot" style="background:${voteColor[state.votes[c.name]]||'#ccc'}"></div><div style="flex:1;min-width:0"><div class="vk-list-name">${c.name}</div><div class="vk-list-cat">${c.ai_category !== 'none' ? c.ai_category : ''}</div></div>`;
+      el.onclick = () => { state.selected = c.name; renderVK(); };
+      list.appendChild(el);
+    });
+  });
+
+  // Detail
+  const c = companies.find(x => x.name === state.selected);
+  if (!c) {
+    det.innerHTML = `<div class="vk-empty"><div class="vk-empty-big">←</div><div class="vk-empty-text">Select a company</div><div class="vk-empty-sub">to see full details</div></div>`;
+  } else {
+    det.innerHTML = `
+      <div class="vk-detail-name">${c.name}</div>
+      <a class="vk-detail-url" href="${c.link}" target="_blank">${c.link.replace('https://','')}</a>
+      <div class="vk-meta-row">
+        ${c.location ? `<span><strong>Location</strong> ${c.location}</span>` : ''}
+        ${c.employees ? `<span><strong>Size</strong> ${c.employees}</span>` : ''}
+        ${c.company_quality ? `<span><strong>Quality</strong> ${'★'.repeat(c.company_quality)}${'☆'.repeat(5-c.company_quality)}</span>` : ''}
+        ${c.stage ? `<span><strong>Stage</strong> ${c.stage}</span>` : ''}
+        ${c.ai_category && c.ai_category !== 'none' ? `<span style="background:#ede9fe;color:#7c3aed;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700">${c.ai_category}</span>` : ''}
+      </div>
+      <div class="vk-notes">${c.notes || ''}</div>
+      <div class="vk-vote-label">Your Vote</div>
+      <div class="vk-vote-row" id="vk-vote-row"></div>
+    `;
+    attachVoteBtns('vk-vote-row', c.name, renderVK);
+  }
+
+  // Insights panel — always rendered, reflects current vote state
+  const prefs = computePrefs();
+  const loved = companies.filter(c => state.votes[c.name] === 'love');
+  const liked = companies.filter(c => state.votes[c.name] === 'like');
+  const topCats = Object.entries(prefs.catScore).sort((a,b) => b[1]-a[1]).slice(0,4);
+  const topLoc = Object.entries(prefs.locScore).sort((a,b) => b[1]-a[1]).slice(0,2);
+  const uncontacted = companies.filter(c => !c.last_outreach && state.votes[c.name] === 'like').length;
+
+  ins.innerHTML = `
+    <div class="vk-ins-title">Insights</div>
+
+    <div class="vk-ins-card">
+      <div class="vk-ins-card-title">📊 Vote breakdown</div>
+      <div class="vk-vote-dist">
+        ${['love','like','neutral','dislike'].map(v => {
+          const n = companies.filter(c => state.votes[c.name] === v).length;
+          return `<div class="vk-vote-dist-row">
+            <div style="width:7px;height:7px;border-radius:50%;background:${voteColor[v]};flex-shrink:0"></div>
+            <span style="flex:1;font-size:12px;color:#374151">${voteLabel[v]}</span>
+            <div class="vk-vote-dist-bar-bg"><div class="vk-vote-dist-bar" style="width:${(n/companies.length*100).toFixed(0)}%;background:${voteColor[v]}"></div></div>
+            <span style="font-size:12px;font-weight:700;color:#111;width:14px;text-align:right">${n}</span>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+
+    ${topCats.length ? `<div class="vk-ins-card">
+      <div class="vk-ins-card-title">🎯 You favor</div>
+      <div class="vk-ins-card-body">
+        ${topCats.map(([cat]) => `<span class="vk-tag" style="background:#eff6ff;color:#1d4ed8">${cat}</span>`).join('')}
+        ${topLoc.length ? `<div style="margin-top:8px;font-size:12px;color:#6b7280">Preferred location: <strong style="color:#111">${topLoc[0][0]}</strong></div>` : ''}
+      </div>
+    </div>` : ''}
+
+    ${uncontacted ? `<div class="vk-ins-card" style="border-color:#fde68a;background:#fffbeb">
+      <div class="vk-ins-card-title" style="color:#92400e">⏳ Not yet contacted</div>
+      <div class="vk-ins-card-body">${uncontacted} liked ${uncontacted === 1 ? 'company hasn\'t' : 'companies haven\'t'} been reached out to.</div>
+    </div>` : ''}
+
+    <div class="vk-ins-card" style="border-color:#bfdbfe;background:#eff6ff">
+      <div class="vk-ins-card-title" style="color:#1e40af">✦ Discover more</div>
+      <div class="vk-ins-card-body" style="margin-bottom:10px">Find companies matching your preference profile.</div>
+      <button class="vk-discover-btn">Find similar companies</button>
+    </div>
+  `;
+}
+document.getElementById('vk-search').oninput = () => renderVK();
+
+// ══ VARIANT L — Two-pane, tab-switching right panel ══
+let vlActiveTab = 'insights';
+function renderVL() {
+  const list = document.getElementById('vl-list');
+  const insPanel = document.getElementById('vl-panel-insights');
+  const detPanel = document.getElementById('vl-panel-detail');
+
+  // List
+  list.innerHTML = '';
+  [['Love','love'],['Like','like'],['Other','other']].forEach(([label,key]) => {
+    const arr = key === 'other' ? filtered().filter(c => !['love','like'].includes(state.votes[c.name])) : filtered().filter(c => state.votes[c.name] === key);
+    if (!arr.length) return;
+    const h = document.createElement('div'); h.className = 'vl-list-hdr'; h.textContent = label; list.appendChild(h);
+    arr.forEach(c => {
+      const el = document.createElement('div'); el.className = 'vl-list-item' + (state.selected === c.name ? ' sel' : '');
+      el.innerHTML = `<div class="vl-dot" style="background:${voteColor[state.votes[c.name]]||'#ccc'}"></div><span class="vl-item-name">${c.name}</span><span class="vl-item-cat">${c.ai_category !== 'none' ? c.ai_category : ''}</span>`;
+      el.onclick = () => {
+        state.selected = c.name;
+        vlActiveTab = 'detail';
+        renderVL();
+      };
+      list.appendChild(el);
+    });
+  });
+
+  // Tabs
+  document.getElementById('vl-tab-insights').classList.toggle('sel', vlActiveTab === 'insights');
+  document.getElementById('vl-tab-detail').classList.toggle('sel', vlActiveTab === 'detail');
+  document.getElementById('vl-panel-insights').classList.toggle('sel', vlActiveTab === 'insights');
+  document.getElementById('vl-panel-detail').classList.toggle('sel', vlActiveTab === 'detail');
+
+  // Insights panel
+  const prefs = computePrefs();
+  const topCats = Object.entries(prefs.catScore).sort((a,b) => b[1]-a[1]).slice(0,5);
+  const topLoc = Object.entries(prefs.locScore).sort((a,b) => b[1]-a[1]);
+  const uncontacted = companies.filter(c => !c.last_outreach && state.votes[c.name] === 'like');
+  const loved = companies.filter(c => state.votes[c.name] === 'love');
+  const liked = companies.filter(c => state.votes[c.name] === 'like');
+
+  insPanel.innerHTML = `
+    <div class="vl-ins-section">
+      <div class="vl-ins-section-title">What you love</div>
+      <div class="vl-company-chips">
+        ${loved.map(c => `<div class="vl-chip" data-name="${c.name}"><div class="vl-chip-dot" style="background:${voteColor['love']}"></div>${c.name}</div>`).join('')}
+        ${liked.slice(0,3).map(c => `<div class="vl-chip" data-name="${c.name}"><div class="vl-chip-dot" style="background:${voteColor['like']}"></div>${c.name}</div>`).join('')}
+        ${liked.length > 3 ? `<div class="vl-chip" style="color:#6b7280">+${liked.length - 3} more</div>` : ''}
+      </div>
+    </div>
+
+    ${topCats.length ? `<div class="vl-ins-section">
+      <div class="vl-ins-section-title">Spaces you gravitate toward</div>
+      <div>${topCats.map(([cat, score]) => `<span class="vl-tag" style="background:${score >= 3 ? '#dcfce7' : '#eff6ff'};color:${score >= 3 ? '#166534' : '#1d4ed8'}">${cat}</span>`).join('')}</div>
+      ${topLoc.length ? `<div style="margin-top:10px;font-size:13px;color:#6b7280">Location preference: ${topLoc.map(([l]) => `<strong style="color:#111">${l}</strong>`).join(', ')}</div>` : ''}
+    </div>` : ''}
+
+    ${uncontacted.length ? `<div class="vl-ins-section">
+      <div class="vl-ins-section-title">⏳ Follow up needed</div>
+      <div class="vl-ins-card">${uncontacted.map(c => `<span class="vl-chip" data-name="${c.name}" style="display:inline-flex;margin:2px"><div class="vl-chip-dot" style="background:${voteColor['like']}"></div>${c.name}</span>`).join('')}</div>
+    </div>` : ''}
+
+    <div class="vl-ins-section">
+      <div class="vl-ins-section-title">Discover</div>
+      <div class="vl-ins-card" style="margin-bottom:12px">Based on your votes, you may be interested in more <strong>AI tooling</strong> and <strong>eval</strong> companies. <a href="#" style="color:#3b82f6">See similar companies →</a></div>
+      <button class="vl-discover-btn">✦ Find more companies</button>
+    </div>
+  `;
+
+  // Wire up company chips to switch to detail tab
+  insPanel.querySelectorAll('[data-name]').forEach(chip => {
+    chip.onclick = () => { state.selected = chip.dataset.name; vlActiveTab = 'detail'; renderVL(); };
+  });
+
+  // Detail panel
+  const c = companies.find(x => x.name === state.selected);
+  if (!c) {
+    detPanel.innerHTML = `<div class="vl-empty"><div style="font-size:32px">←</div><div style="font-size:15px;font-weight:600;color:#374151;margin-top:8px">Select a company</div><div style="font-size:13px;color:#9ca3af">from the list to view details</div></div>`;
+  } else {
+    detPanel.innerHTML = `
+      <div class="vl-detail-name">${c.name}</div>
+      <a class="vl-detail-url" href="${c.link}" target="_blank">${c.link.replace('https://','')}</a>
+      <div class="vl-meta-row">
+        ${c.location ? `<span><strong>Location</strong> ${c.location}</span>` : ''}
+        ${c.employees ? `<span><strong>Size</strong> ${c.employees}</span>` : ''}
+        ${c.company_quality ? `<span><strong>Quality</strong> ${'★'.repeat(c.company_quality)}${'☆'.repeat(5-c.company_quality)}</span>` : ''}
+        ${c.stage ? `<span><strong>Stage</strong> ${c.stage}</span>` : ''}
+        ${c.ai_category && c.ai_category !== 'none' ? `<span style="background:#ede9fe;color:#7c3aed;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700">${c.ai_category}</span>` : ''}
+      </div>
+      <div class="vl-notes">${c.notes || ''}</div>
+      <div class="vl-vote-label">Your Vote</div>
+      <div class="vl-vote-row" id="vl-vote-row"></div>
+    `;
+    attachVoteBtns('vl-vote-row', c.name, renderVL);
+  }
+}
+document.getElementById('vl-tab-insights').onclick = () => { vlActiveTab = 'insights'; renderVL(); };
+document.getElementById('vl-tab-detail').onclick = () => { vlActiveTab = 'detail'; renderVL(); };
+
+// ══ VARIANT M — Dashboard-first, drawer detail ══
+function renderVM() {
+  const main = document.getElementById('vm-main');
+  const sidebar = document.getElementById('vm-sidebar');
+  const prefs = computePrefs();
+  const loved = companies.filter(c => state.votes[c.name] === 'love');
+  const liked = companies.filter(c => state.votes[c.name] === 'like');
+  const topCats = Object.entries(prefs.catScore).sort((a,b) => b[1]-a[1]).slice(0,4);
+  const topLoc = Object.entries(prefs.locScore).sort((a,b) => b[1]-a[1]).slice(0,2);
+
+  // Group companies: love+like first, then others
+  const highlighted = [...loved, ...liked];
+  const rest = companies.filter(c => !['love','like'].includes(state.votes[c.name]));
+
+  main.innerHTML = `
+    ${highlighted.length ? `
+      <div class="vm-section-title">Love & Like</div>
+      <div class="vm-company-grid" id="vm-grid-hl"></div>
+    ` : ''}
+    ${rest.length ? `
+      <div class="vm-section-title" style="margin-top:8px">Others</div>
+      <div class="vm-company-grid" id="vm-grid-rest"></div>
+    ` : ''}
+  `;
+
+  function makeTile(c) {
+    const el = document.createElement('div');
+    el.className = 'vm-company-tile' + (state.selected === c.name ? ' sel' : '');
+    el.innerHTML = `
+      <div class="vm-tile-top"><span class="vm-tile-name">${c.name}</span><span class="vm-tile-vote">${voteEmoji[state.votes[c.name]] || ''}</span></div>
+      ${c.ai_category && c.ai_category !== 'none' ? `<div class="vm-tile-cat">${c.ai_category}</div>` : ''}
+      <div class="vm-tile-quality">${c.company_quality ? '★'.repeat(c.company_quality) + '☆'.repeat(5-c.company_quality) : ''}</div>
+    `;
+    el.onclick = () => { state.selected = c.name; openVMDrawer(c); renderVM(); };
+    return el;
+  }
+
+  const hlGrid = document.getElementById('vm-grid-hl');
+  const restGrid = document.getElementById('vm-grid-rest');
+  if (hlGrid) highlighted.forEach(c => hlGrid.appendChild(makeTile(c)));
+  if (restGrid) rest.forEach(c => restGrid.appendChild(makeTile(c)));
+
+  // Sidebar
+  sidebar.innerHTML = `
+    <div class="vm-sidebar-title">Insights</div>
+
+    <div class="vm-ins-block">
+      <div class="vm-ins-block-title">At a glance</div>
+      <div class="vm-stat-pair"><span class="vm-stat-pair-label">Total tracked</span><span class="vm-stat-pair-val">${companies.length}</span></div>
+      <div class="vm-stat-pair"><span class="vm-stat-pair-label">Love + Like</span><span class="vm-stat-pair-val" style="color:#10b981">${loved.length + liked.length}</span></div>
+      <div class="vm-stat-pair"><span class="vm-stat-pair-label">In pipeline</span><span class="vm-stat-pair-val" style="color:#3b82f6">${companies.filter(c=>c.stage&&c.stage!=='Rejected Offer').length}</span></div>
+    </div>
+
+    ${topCats.length ? `<div class="vm-ins-block">
+      <div class="vm-ins-block-title">You favor</div>
+      ${topCats.map(([cat]) => `<span class="vm-ins-tag" style="background:#eff6ff;color:#1d4ed8">${cat}</span>`).join('')}
+      ${topLoc.length ? `<div style="margin-top:8px;font-size:12px;color:#6b7280">Especially in <strong style="color:#111">${topLoc[0][0]}</strong></div>` : ''}
+    </div>` : ''}
+
+    <div class="vm-ins-block">
+      <div class="vm-ins-block-title">✦ Discover more</div>
+      <div style="font-size:12px;color:#6b7280;margin-bottom:10px">Find companies that match your vote history.</div>
+      <button class="vm-discover-btn">Find similar companies</button>
+    </div>
+  `;
+}
+
+function openVMDrawer(c) {
+  const drawer = document.getElementById('vm-drawer');
+  const body = document.getElementById('vm-drawer-body');
+  document.getElementById('vm-drawer-title').textContent = c.name;
+  body.innerHTML = `
+    <div class="vm-drawer-name">${c.name}</div>
+    <a class="vm-drawer-url" href="${c.link}" target="_blank">${c.link.replace('https://','')}</a>
+    <div class="vm-drawer-meta">
+      ${c.location ? `<span><strong>Location</strong> ${c.location}</span>` : ''}
+      ${c.employees ? `<span><strong>Size</strong> ${c.employees}</span>` : ''}
+      ${c.company_quality ? `<span><strong>Quality</strong> ${'★'.repeat(c.company_quality)}${'☆'.repeat(5-c.company_quality)}</span>` : ''}
+      ${c.stage ? `<span><strong>Stage</strong> ${c.stage}</span>` : ''}
+      ${c.ai_category && c.ai_category !== 'none' ? `<span style="background:#ede9fe;color:#7c3aed;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700">${c.ai_category}</span>` : ''}
+    </div>
+    <div class="vm-drawer-notes">${c.notes || ''}</div>
+    <div class="vm-drawer-vote-label">Your Vote</div>
+    <div class="vm-drawer-vote-row" id="vm-vote-row"></div>
+  `;
+  attachVoteBtns('vm-vote-row', c.name, () => { renderVM(); openVMDrawer(companies.find(x => x.name === c.name)); });
+  drawer.classList.add('open');
+}
+document.getElementById('vm-drawer-close').onclick = () => {
+  document.getElementById('vm-drawer').classList.remove('open');
+  state.selected = null;
+  renderVM();
+};
+
+// Command palette for M
+document.getElementById('vm-search-trigger').onclick = () => {
+  document.getElementById('vm-palette').classList.add('open');
+  document.getElementById('vm-palette-input').focus();
+  renderVMPalette('');
+};
+document.getElementById('vm-palette').onclick = (e) => { if (e.target === document.getElementById('vm-palette')) document.getElementById('vm-palette').classList.remove('open'); };
+document.getElementById('vm-palette-input').oninput = (e) => renderVMPalette(e.target.value);
+function renderVMPalette(query) {
+  const results = document.getElementById('vm-palette-results');
+  const q = query.toLowerCase();
+  const matches = q ? companies.filter(c => c.name.toLowerCase().includes(q) || c.ai_category.toLowerCase().includes(q)) : companies;
+  results.innerHTML = matches.length ? matches.map((c,i) => `
+    <div class="vm-palette-item${i===0?' focus':''}" data-name="${c.name}">
+      <div style="width:7px;height:7px;border-radius:50%;background:${voteColor[state.votes[c.name]]||'#ccc'};flex-shrink:0"></div>
+      <span class="vm-palette-item-name">${c.name}</span>
+      <span class="vm-palette-item-meta">${c.ai_category !== 'none' ? c.ai_category : ''} ${voteLabel[state.votes[c.name]] || ''}</span>
+    </div>
+  `).join('') : '<div style="padding:20px;text-align:center;color:#9ca3af;font-size:13px">No results</div>';
+  results.querySelectorAll('[data-name]').forEach(el => {
+    el.onclick = () => {
+      const c = companies.find(x => x.name === el.dataset.name);
+      state.selected = c.name;
+      document.getElementById('vm-palette').classList.remove('open');
+      openVMDrawer(c);
+      renderVM();
+    };
+  });
+}
+
+// ── Switcher ──
+function setVariant(v) {
+  state.variant=v;
+  setVariantInURL(v);
+  document.querySelectorAll('.variant').forEach(el=>el.classList.remove('active'));
+  document.getElementById('v'+v.toLowerCase()).classList.add('active');
+  document.getElementById('sw-label').textContent=`${v} — ${variantNames[v]}`;
+  renderCurrent();
+  document.querySelectorAll(`#v${v.toLowerCase()} [data-filter]`).forEach(btn=>{
+    btn.onclick=()=>{
+      state.filter=btn.dataset.filter;
+      document.querySelectorAll(`#v${v.toLowerCase()} [data-filter]`).forEach(b=>b.classList.remove('sel'));
+      btn.classList.add('sel');
+      renderCurrent();
+    };
+  });
+}
+function renderCurrent() {
+  const r={A:renderVA,B:renderVB,C:renderVC,D:renderVD,E:renderVE,F:renderVF,G:renderVG,H:renderVH,I:renderVI,J:renderVJ,K:renderVK,L:renderVL,M:renderVM};
+  (r[state.variant]||renderVA)();
+}
+document.getElementById('sw-prev').onclick=()=>{const i=(variants.indexOf(state.variant)-1+variants.length)%variants.length;setVariant(variants[i]);};
+document.getElementById('sw-next').onclick=()=>{const i=(variants.indexOf(state.variant)+1)%variants.length;setVariant(variants[i]);};
+document.addEventListener('keydown',e=>{
+  const tag=document.activeElement?.tagName;
+  if(['INPUT','TEXTAREA'].includes(tag)||document.activeElement?.isContentEditable) return;
+  if(e.key==='ArrowLeft') document.getElementById('sw-prev').click();
+  if(e.key==='ArrowRight') document.getElementById('sw-next').click();
+});
+setVariant(getVariantFromURL());
+</script>
+</body>
+</html>
