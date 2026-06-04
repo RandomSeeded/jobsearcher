@@ -1,6 +1,9 @@
 import { Router } from 'express'
+import { spawn } from 'child_process'
 import fs from 'fs'
 import path from 'path'
+
+let distilling = false
 
 type PreferenceItem = { short: string; text: string; confidence: number }
 type Preferences = { likes: PreferenceItem[]; dislikes: PreferenceItem[]; generatedAt: string | null }
@@ -48,7 +51,24 @@ export function preferencesRouter(dataDir: string) {
       return res.status(404).json({ error: 'preferences.md not found' })
     }
     const md = fs.readFileSync(prefsPath, 'utf8')
-    res.json(parse(md))
+    res.json({ ...parse(md), distilling })
+  })
+
+  router.post('/distill', (_req, res) => {
+    if (distilling) return res.status(409).json({ error: 'already running' })
+    distilling = true
+    res.status(202).json({ distilling: true })
+
+    const proc = spawn('claude', [
+      '-p', '/distill-preferences',
+      '--model', 'claude-sonnet-4-6',
+      '--allowedTools', 'Bash,Read,Write',
+      '--max-turns', '20',
+      '--strict-mcp-config',
+    ], { cwd: process.cwd(), stdio: 'ignore' })
+
+    proc.on('close', () => { distilling = false })
+    proc.on('error', () => { distilling = false })
   })
 
   return router

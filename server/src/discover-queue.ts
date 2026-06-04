@@ -148,9 +148,6 @@ function executeRun(run: DiscoverRun, dataDir: string) {
       saveQueue(dataDir, q)
     }
     activeRunId = null
-    // drain next pending — reuse already-loaded queue
-    const pending = q.find(r => r.status === 'pending')
-    if (pending) executeRun(pending, dataDir)
   })
 }
 

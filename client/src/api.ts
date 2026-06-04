@@ -1,12 +1,17 @@
 import type { Company } from './types'
 
 export interface PreferenceItem { short: string; text: string; confidence: number }
-export interface Preferences { likes: PreferenceItem[]; dislikes: PreferenceItem[]; generatedAt: string | null }
+export interface Preferences { likes: PreferenceItem[]; dislikes: PreferenceItem[]; generatedAt: string | null; distilling?: boolean }
 
 export async function fetchPreferences(): Promise<Preferences> {
   const res = await fetch('/api/preferences')
   if (!res.ok) throw new Error('Failed to fetch preferences')
   return res.json()
+}
+
+export async function distillPreferences(): Promise<void> {
+  const res = await fetch('/api/preferences/distill', { method: 'POST' })
+  if (!res.ok && res.status !== 409) throw new Error('Failed to start distill')
 }
 
 export async function fetchCompanies(): Promise<Company[]> {

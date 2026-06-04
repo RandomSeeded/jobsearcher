@@ -138,11 +138,11 @@ export function DiscoverQueuePane() {
         </button>
       </div>
 
-      <div style={{ flex: 1, overflow: 'auto' }}>
+      <div style={{ height: '14rem', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
         {runs.length === 0 && (
           <div style={{ padding: '1rem', color: '#9ca3af' }}>Queue empty</div>
         )}
-        {runs.map(run => (
+        {[...runs].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 10).map(run => (
           <div key={run.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
             <div
               style={{ padding: '10px 12px', cursor: run.status === 'done' || run.status === 'failed' ? 'pointer' : 'default' }}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { fetchCompanies, fetchPreferences, patchCompany, enqueueRun } from './api'
+import { fetchCompanies, fetchPreferences, patchCompany, enqueueRun, distillPreferences } from './api'
 import type { Preferences } from './api'
 import { CompanyDetailPane } from './CompanyDetailPane'
 import { CommandPalette } from './CommandPalette'
@@ -20,6 +20,22 @@ export function Dashboard() {
     fetchCompanies().then(setCompanies)
     fetchPreferences().then(setPreferences).catch(() => {})
   }, [])
+
+  useEffect(() => {
+    if (!preferences?.distilling) return
+    const id = setInterval(() => {
+      fetchPreferences().then(p => {
+        setPreferences(p)
+        if (!p.distilling) clearInterval(id)
+      }).catch(() => {})
+    }, 4000)
+    return () => clearInterval(id)
+  }, [preferences?.distilling])
+
+  async function handleDistill() {
+    await distillPreferences()
+    setPreferences(p => p ? { ...p, distilling: true } : p)
+  }
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -88,7 +104,7 @@ export function Dashboard() {
         )}
       </div>
 
-      <div className="flex shrink-0 w-[430px] border-l border-gray-200 overflow-hidden h-screen">
+      <div className="flex shrink-0 w-[480px] border-l border-gray-200 overflow-hidden h-screen">
         {selected ? (
           <CompanyDetailPane
             company={selected}
@@ -97,11 +113,28 @@ export function Dashboard() {
             onFindMore={handleFindMore}
           />
         ) : (
-          <aside className="w-full flex flex-col gap-6 p-6 bg-gray-50 overflow-y-auto">
+          <aside className="w-full flex flex-col gap-6 px-6 pt-3 pb-6 bg-gray-50 overflow-hidden h-full">
             <DiscoverQueuePane />
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">Learned preferences</p>
-              <div className="flex flex-wrap gap-1">
+            <div className="flex flex-col min-h-0 flex-1">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <span style={{ fontWeight: 700, fontSize: 13 }}>Learned preferences</span>
+                <button
+                  onClick={handleDistill}
+                  disabled={preferences?.distilling}
+                  style={{
+                    fontSize: 11,
+                    padding: '2px 8px',
+                    borderRadius: 4,
+                    border: '1px solid #d1d5db',
+                    background: '#fff',
+                    color: preferences?.distilling ? '#9ca3af' : '#374151',
+                    cursor: preferences?.distilling ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {preferences?.distilling ? '⟳ running' : 'Re-distill'}
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-1 overflow-y-auto min-h-0 flex-1">
                 {preferences && [
                   ...preferences.likes.map(p => ({ ...p, kind: 'like' as const })),
                   ...preferences.dislikes.map(p => ({ ...p, kind: 'dislike' as const })),
