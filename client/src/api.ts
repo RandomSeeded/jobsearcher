@@ -29,11 +29,11 @@ export interface DiscoverRun {
   id: string
   prompt?: string
   count: number
+  model: string
   status: 'pending' | 'running' | 'done' | 'failed'
   created_at: string
   run_at: string | null
   log_path?: string
-  output?: string
   output_summary?: string
   discovered_companies?: string[]
 }
@@ -44,11 +44,11 @@ export async function fetchQueue(): Promise<DiscoverRun[]> {
   return res.json()
 }
 
-export async function enqueueRun(prompt?: string, count = 5): Promise<DiscoverRun> {
+export async function enqueueRun(prompt?: string, count = 5, model = 'claude-haiku-4-5-20251001'): Promise<DiscoverRun> {
   const res = await fetch('/api/discover-queue', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt, count }),
+    body: JSON.stringify({ prompt, count, model }),
   })
   if (!res.ok) throw new Error('Failed to enqueue')
   return res.json()

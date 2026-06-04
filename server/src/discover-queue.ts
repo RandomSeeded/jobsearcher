@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { spawn } from 'child_process'
-import { readFileSync, writeFileSync, existsSync, createWriteStream, mkdirSync } from 'fs'
+import { readFileSync, writeFileSync, existsSync, createWriteStream, mkdirSync, readdirSync } from 'fs'
 import { join } from 'path'
 import { randomUUID } from 'crypto'
 import yaml from 'js-yaml'
@@ -9,11 +9,11 @@ export interface DiscoverRun {
   id: string
   prompt?: string
   count: number
+  model: string
   status: 'pending' | 'running' | 'done' | 'failed'
   created_at: string
   run_at: string | null
   log_path?: string
-  output?: string
   output_summary?: string
   discovered_companies?: string[]
 }
@@ -67,15 +67,13 @@ function logPath(dataDir: string, id: string) {
 }
 
 function buildPromptArg(run: DiscoverRun): string {
-  const parts: string[] = []
-  if (run.prompt) parts.push(run.prompt)
-  parts.push(`find ${run.count} companies`)
-  return parts.join(' — ')
+  return [run.prompt, `count=${run.count}`].filter(Boolean).join(' ')
 }
 
 let activeRunId: string | null = null
 
-function executeRun(run: DiscoverRun, dataDir: string, model = 'claude-haiku-4-5-20251001') {
+function executeRun(run: DiscoverRun, dataDir: string) {
+  const model = run.model ?? 'claude-haiku-4-5-20251001'
   if (activeRunId) return
   activeRunId = run.id
 
@@ -92,12 +90,20 @@ function executeRun(run: DiscoverRun, dataDir: string, model = 'claude-haiku-4-5
   const log = createWriteStream(logPath(dataDir, run.id), { flags: 'a' })
   log.write(`[${new Date().toISOString()}] starting run ${run.id}\nprompt: ${promptArg}\nmodel: ${model}\n\n`)
 
+  const maxTurns = run.count * 40  // ~40 turns per agent (8 searches + overhead)
   const proc = spawn('claude', [
     '-p', `/discover-jobs ${promptArg}`,
     '--model', model,
     '--allowedTools', 'Bash,Read,Write,WebSearch,WebFetch,Agent',
+    '--max-turns', String(maxTurns),
     '--verbose',
-  ], { cwd: process.cwd(), stdio: ['ignore', 'pipe', 'pipe'] })
+    '--output-format', 'json',
+    '--strict-mcp-config',  // no MCP servers — reduces system prompt size ~30-40%
+  ], {
+    cwd: process.cwd(),
+    stdio: ['ignore', 'pipe', 'pipe'],
+    env: { ...process.env, CLAUDE_CODE_SUBAGENT_MODEL: model },
+  })
 
   const TIMEOUT_MS = 30 * 60 * 1000 // 30 min
   const timeout = setTimeout(() => {
@@ -107,17 +113,30 @@ function executeRun(run: DiscoverRun, dataDir: string, model = 'claude-haiku-4-5
 
   let output = ''
   proc.stdout.on('data', (d: Buffer) => { output += d.toString(); log.write(d) })
-  proc.stderr.on('data', (d: Buffer) => { output += d.toString(); log.write(d) })
+  proc.stderr.on('data', (d: Buffer) => { log.write(d) })  // log stderr but don't mix into output (JSON parse)
 
   proc.on('close', (code: number | null) => {
     clearTimeout(timeout)
     log.write(`\n[${new Date().toISOString()}] exited with code ${code}\n`)
+
+    // Parse modelUsage from JSON output and log it
+    try {
+      const events = JSON.parse(output) as Array<Record<string, unknown>>
+      const result = events.find(e => e.type === 'result' && e.modelUsage)
+      if (result?.modelUsage) {
+        const usage = result.modelUsage as Record<string, { inputTokens: number; outputTokens: number; cacheReadInputTokens?: number; costUSD?: number }>
+        log.write('\n[model usage]\n')
+        for (const [m, u] of Object.entries(usage)) {
+          log.write(`  ${m}: ${u.inputTokens} in / ${u.outputTokens} out / cache-read ${u.cacheReadInputTokens ?? 0} / $${(u.costUSD ?? 0).toFixed(4)}\n`)
+        }
+      }
+    } catch { /* output may not be valid JSON if process crashed early */ }
+
     log.end()
     const q = loadQueue(dataDir)
     const e = q.find(r => r.id === run.id)
     if (e) {
       e.status = code === 0 ? 'done' : 'failed'
-      e.output = output
       const { slugs, names } = readManifest(dataDir)
       if (slugs.length > 0) {
         e.discovered_companies = names
@@ -129,9 +148,9 @@ function executeRun(run: DiscoverRun, dataDir: string, model = 'claude-haiku-4-5
       saveQueue(dataDir, q)
     }
     activeRunId = null
-    // drain next pending
-    const pending = loadQueue(dataDir).find(r => r.status === 'pending')
-    if (pending) executeRun(pending, dataDir, model)
+    // drain next pending — reuse already-loaded queue
+    const pending = q.find(r => r.status === 'pending')
+    if (pending) executeRun(pending, dataDir)
   })
 }
 
@@ -143,11 +162,12 @@ export function discoverQueueRouter(dataDir: string) {
   })
 
   router.post('/', (req, res) => {
-    const { prompt, count = 5 } = req.body as { prompt?: string; count?: number }
+    const { prompt, count = 5, model = 'claude-haiku-4-5-20251001' } = req.body as { prompt?: string; count?: number; model?: string }
     const run: DiscoverRun = {
       id: randomUUID(),
       prompt: prompt || undefined,
       count: Math.min(Math.max(1, count), 20),
+      model,
       status: 'pending',
       created_at: new Date().toISOString(),
       run_at: null,
@@ -164,9 +184,7 @@ export function discoverQueueRouter(dataDir: string) {
     if (!run) return res.status(404).json({ error: 'not found' })
     if (run.status !== 'pending') return res.status(409).json({ error: 'not pending' })
     if (activeRunId) return res.status(409).json({ error: 'another run is active' })
-    const scheduled = req.query.source === 'scheduled'
-    const model = scheduled ? 'claude-sonnet-4-6' : 'claude-haiku-4-5-20251001'
-    executeRun(run, dataDir, model)
+    executeRun(run, dataDir)
     res.json(run)
   })
 
@@ -174,11 +192,23 @@ export function discoverQueueRouter(dataDir: string) {
     const queue = loadQueue(dataDir)
     const run = queue.find(r => r.id === req.params.id)
     if (!run || !run.log_path) return res.status(404).json({ error: 'no log' })
+
+    const parts: string[] = []
+
+    // Outer orchestrator log
+    try { parts.push(readFileSync(run.log_path, 'utf8')) } catch { /* no outer log yet */ }
+
+    // Per-agent run.log files from data/run/{run_id}/*/run.log
+    const runDir = join(dataDir, '..', 'run', run.id)
     try {
-      res.type('text/plain').send(readFileSync(run.log_path, 'utf8'))
-    } catch {
-      res.status(404).json({ error: 'log file not found' })
-    }
+      for (const agent of readdirSync(runDir)) {
+        const agentLog = join(runDir, agent, 'run.log')
+        try { parts.push(readFileSync(agentLog, 'utf8')) } catch { /* agent not started yet */ }
+      }
+    } catch { /* run dir doesn't exist yet */ }
+
+    if (parts.length === 0) return res.status(404).json({ error: 'no log data yet' })
+    res.type('text/plain').send(parts.join('\n'))
   })
 
   router.delete('/:id', (req, res) => {

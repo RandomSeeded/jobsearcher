@@ -18,5 +18,29 @@ A focused UI for evaluating unrated contenders. Contains all companies whose [[V
 ## Fundraising
 A freeform string capturing a company's funding status — either total raised, latest round size, valuation, or a combination (e.g. `$80M Series A at $800M val`). Optional; populate when known. Not duplicated from `notes` — if the value is only buried in prose, leave this null and surface it here when it becomes a comparison signal.
 
+## Candidate
+A company surfaced by a discovery agent but not yet promoted. Persisted in `/data/candidates/`. May have incomplete fields. Distinguished from [[Opportunity]] by lacking the promotion step.
+
+## Opportunity
+A company selected by a discovery agent as the strongest candidate from its run, backfilled to completeness, and promoted from `/data/run/` to `/data/opportunities/`. Ready for user [[Vote]].
+
+## Backfill
+The process of performing follow-up web searches to fill in missing fields on a [[Candidate]] before [[Promotion]]. Executed after a candidate is selected as the strongest from a run. Bounded by a configurable max-search limit.
+
+## Promotion
+The act of moving a company from `/data/run/{run-id}/{agent-id}/` to `/data/opportunities/`. Only the strongest candidate per agent run is promoted; the rest move to `/data/candidates/`.
+
+## Run
+One invocation of the discover-jobs skill. Produces N [[Opportunity|Opportunities]] via N parallel agents. All agent working directories live under `/data/run/{run-uuid}/`. Each agent subdirectory is named `{type}-{N}` (e.g., `preference-1`, `explore-1`).
+
+## Discovery Agent
+A haiku-model subagent responsible for finding exactly one [[Opportunity]] per run. Two types: [[Preference-Based Agent]] and [[Exploratory Agent]].
+
+## Preference-Based Agent
+A [[Discovery Agent]] that targets companies matching known positive signals in the [[Preference Profile]], weighted by confidence score, and avoids known negative signals. 2/3 of agents in a run are this type.
+
+## Exploratory Agent
+A [[Discovery Agent]] that surfaces companies from top-tier investor portfolios which do NOT match any known positive preferences or high-confidence negative preferences. 1/3 of agents in a run are this type.
+
 ## Stage
 The current status of the user's job application process with a company. One of: `Outreach`, `Recruiter Call`, `Hiring Manager Interview`, `Technical Interview`, `System Design`, `Takehome`, `ONSITE`, `OFFER`, `Rejected Offer`, `Rejected me`, `Rejected them`, `On Hold`, `BLOCKED ME`, `BLOCKED THEM`. Null means no active process. Fundraising stage (e.g. "Series B") belongs in `notes`, not here.

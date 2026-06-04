@@ -14,7 +14,7 @@ export function buildApp(dataDir: string) {
 
 if (process.env.NODE_ENV !== 'test') {
   const PORT = process.env.PORT ?? 3001
-  const DATA_DIR = process.env.DATA_DIR ?? '../data/contenders'
+  const DATA_DIR = process.env.DATA_DIR ?? '../data/opportunities'
   buildApp(DATA_DIR).listen(PORT, () => {
     console.log(`server listening on :${PORT}`)
   })

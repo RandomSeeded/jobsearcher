@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "DATA_DIR=../data/contenders PORT=3002 tsx watch src/index.ts",
+    "dev": "DATA_DIR=../data/opportunities PORT=3002 tsx watch src/index.ts",
     "test": "vitest run"
   },
   "dependencies": {

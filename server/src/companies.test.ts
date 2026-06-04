@@ -5,7 +5,7 @@ import path from 'path'
 import os from 'os'
 import { buildApp } from './index.js'
 
-const CONTENDERS = path.resolve('..', 'data', 'contenders')
+const CONTENDERS = path.resolve('..', 'data', 'opportunities')
 
 let tmpDir: string
 

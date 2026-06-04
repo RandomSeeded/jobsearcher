@@ -5,103 +5,93 @@ description: Discovers new job opportunities by searching the web for companies 
 
 # discover-jobs
 
-One round of job discovery: search → present top 5 + bench → persist all.
+Orchestrate N parallel discovery agents to find N new opportunities. Each agent finds exactly one company, backfills it, and promotes it to `/data/opportunities/`.
 
 ## Folder layout
 
-- `/data/contenders/` — top 5 selected companies, active voting pipeline
-- `/data/raw/` — all other well-researched companies from searches (bench)
+- `/data/opportunities/` — promoted companies ready for user voting
+- `/data/candidates/` — researched companies not selected as opportunities (bench)
+- `/data/run/{run_id}/{agent_id}/` — agent working directories (persist indefinitely for audit)
+
+## Arguments
+
+```
+/discover-jobs [count=5] [max_discovery_searches=5] [max_backfill_searches=3]
+```
+
+- `count` — number of opportunities to find (= number of agents spawned, default: 5)
+- `max_discovery_searches` — per-agent search budget for finding a candidate (default: 5)
+- `max_backfill_searches` — per-agent search budget for backfilling (default: 3)
 
 ## Workflow
 
 ### 1. Load preference profile
-Read `/data/preferences.md`. If the file does not exist, stop immediately and tell the user:
+
+Read `/data/preferences.md`. If the file does not exist, stop immediately:
 
 > `/data/preferences.md` not found — run `/distill-preferences` first, then retry.
 
-Do not attempt to infer preferences inline.
+### 2. Generate run ID
 
-### 2. Run parallel searches via fan-out
-Use the `fan-out` skill to run **3 searches** in parallel:
-- **2 exploit:** target known preference signals
-- **1 explore:** surface companies with elite investor signal, unconstrained by category, size, or location
-
-  The explore agent must search specifically for portfolio companies of top-tier investors. Use this tiered list:
-  - **Tier 1 (prefer):** Sequoia, a16z, Benchmark, Founders Fund
-  - **Tier 2 (include if strong):** Khosla Ventures, General Catalyst, Accel, Lightspeed
-
-  Prefer Tier 1 portfolio companies. Include Tier 2 only if the company has multiple strong signals: Tier 2 investor + exceptional traction, or two Tier 2 investors. No constraint on AI category, location, stage, or size — the goal is to surface companies you'd never have considered that have elite backing.
-
-Keep the count low — each agent is expensive. Queries should improve each run as preference signal accumulates, but never collapse entirely to confirmation — always include a genuine unknown.
-
-Spawn each subagent with **`model: "haiku"`** — these are extraction tasks, not reasoning tasks.
-
-Each subagent must:
-1. Search the web for companies matching the query
-2. For each well-researched company found, **write a `/data/raw/<slug>.yaml` file directly** (see schema below) — skip companies already in `/data/contenders/` or `/data/raw/`
-3. **Return only a list of filenames written** — no prose summaries, no citations in the response body
-
-This keeps subagent result payloads tiny and avoids dumping research into the conversation context.
-
-### 3. Select top 5
-Read the newly written `/data/raw/` files (identified by the filenames each subagent returned). From the deduplicated pool pick:
-- **3 exploit:** best matches to known preferences
-- **2 explore:** most interesting unknowns
-
-Use the structured fields (`company_quality`, `ai_category`, `employees`, `location`, `terse`, `notes`) for selection — not `details`.
-
-### 4. Present top 5
-Write a rich-text summary for the selected 5 before promoting:
-
-```
-**N. Company Name** — {ai_category} | ~{employees} employees | {location}
-Funding: {funding summary}
-What they do: {terse}
-Why surfaced: {one line — what preference signal or unknown territory}
-Quality: {X}/5
+```bash
+python3 -c "import uuid; print(uuid.uuid4())"
 ```
 
-### 5. Promote top 5 to contenders
-Move the 5 selected files from `/data/raw/` to `/data/contenders/`. All other files written by subagents remain in `/data/raw/` as bench.
+Store as `run_id`.
 
-If running interactively, suggest the user run `/vote-jobs` to rate the new contenders. If running non-interactively (stdin is not a TTY / invoked via `-p`), skip any prompting and exit immediately after promoting — do not wait for user input.
+### 3. Compute agent split
+
+```
+n_explore = floor(count / 3)
+n_pref    = count - n_explore
+```
+
+Example: count=5 → 4 preference agents + 1 exploratory agent.
+
+### 4. Spawn agents in parallel
+
+Send a **single response** containing one Agent tool call per agent. All agents run in parallel with `model: "haiku"`.
+
+Agent IDs: `preference-1`, `preference-2`, … `preference-{n_pref}`, `explore-1`, … `explore-{n_explore}`
+
+Each agent prompt must be **fully self-contained** — include run_id, agent_id, max_discovery_searches, max_backfill_searches, and the full skill invocation. Agents start cold with no conversation history.
+
+**Preference agent prompt template:**
+```
+You are a discovery agent for a job search tool.
+
+Run: /preference-agent run_id={run_id} agent_id={agent_id} max_discovery_searches={max_discovery_searches} max_backfill_searches={max_backfill_searches}
+
+Working directory for this run is data/run/{run_id}/{agent_id}/. Create it with mkdir -p if it doesn't exist.
+```
+
+**Exploratory agent prompt template:**
+```
+You are a discovery agent for a job search tool.
+
+Run: /exploratory-agent run_id={run_id} agent_id={agent_id} max_discovery_searches={max_discovery_searches} max_backfill_searches={max_backfill_searches}
+
+Working directory for this run is data/run/{run_id}/{agent_id}/. Create it with mkdir -p if it doesn't exist.
+```
+
+### 5. Collect results
+
+Wait for all agents to return. Each agent returns either a promoted slug or an empty string (failure).
+
+Collect all non-empty slugs into `promoted`.
 
 ### 6. Write discovery manifest
 
-After promoting, write `/data/discover-manifest.json` with the list of slugs that were promoted:
-
-```json
-{ "promoted": ["slug1", "slug2", "slug3", "slug4", "slug5"] }
+```bash
+echo '{"promoted": ["{slug1}", "{slug2}", ...]}' > data/discover-manifest.json
 ```
 
-Slugs are filenames without the `.yaml` extension. This file is read by the server to determine what was discovered. Always overwrite it — runs are serial and there is no concurrent access.
+Or construct and write the JSON via the Write tool. Always overwrite — runs are serial.
 
----
+### 7. Finish
 
-## YAML schema (for subagents writing `/data/raw/<slug>.yaml`)
+If running interactively (stdin is a TTY), suggest:
 
-```yaml
-company: "Name"
-terse: "..."         # ≤5 words: what the company does (e.g. "fast inference API for LLMs")
-role: null
-stage: null
-location: "..."
-employees: "..."
-compensation: null
-excitement: null
-company_quality: X   # 1-5: founder quality, investor quality, growth trajectory
-recruiter_type: null
-contact: null
-link: "https://..."
-last_outreach: null
-notes: >
-  Funding round, key investors, product in one sentence, why surfaced.
-details: >
-  Rich summary: founding story, product depth, business model, team background,
-  tech stack, growth trajectory, competitive landscape, any red flags.
-  NOT used as search context — for human reading only.
-vote: null
-ai_category: "..."   # none | ai application layer | ai tooling layer | ai data layer | ai infrastructure | ai model companies
-```
+> Found {N} new opportunities. Run `/vote-jobs` to rate them.
 
-`details` is write-once-and-append: if the file already exists, preserve existing content and append new findings below a `---` separator with the date.
+If running non-interactively (invoked via `-p`), exit immediately after writing the manifest.

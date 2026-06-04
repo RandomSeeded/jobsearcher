@@ -13,6 +13,7 @@ export function DiscoverQueuePane() {
   const [runs, setRuns] = useState<DiscoverRun[]>([])
   const [prompt, setPrompt] = useState('')
   const [count, setCount] = useState(5)
+  const [model, setModel] = useState('claude-haiku-4-5-20251001')
   const [expanded, setExpanded] = useState<string | null>(null)
   const [liveLog, setLiveLog] = useState<string>('')
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -55,7 +56,7 @@ export function DiscoverQueuePane() {
   }, [liveLog])
 
   async function handleEnqueue() {
-    const run = await enqueueRun(prompt.trim() || undefined, count)
+    const run = await enqueueRun(prompt.trim() || undefined, count, model)
     setRuns(r => [run, ...r])
     setPrompt('')
   }
@@ -95,7 +96,7 @@ export function DiscoverQueuePane() {
             marginBottom: 6,
           }}
         />
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 8 }}>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 6 }}>
           <label style={{ color: '#6b7280' }}>Find</label>
           <input
             type="number"
@@ -106,6 +107,18 @@ export function DiscoverQueuePane() {
             style={{ width: 48, border: '1px solid #d1d5db', borderRadius: 6, padding: '4px 6px', fontSize: 12 }}
           />
           <label style={{ color: '#6b7280' }}>companies</label>
+        </div>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 8 }}>
+          <label style={{ color: '#6b7280' }}>Model</label>
+          <select
+            value={model}
+            onChange={e => setModel(e.target.value)}
+            style={{ flex: 1, border: '1px solid #d1d5db', borderRadius: 6, padding: '4px 6px', fontSize: 12, background: '#fff' }}
+          >
+            <option value="claude-haiku-4-5-20251001">Haiku</option>
+            <option value="claude-sonnet-4-6">Sonnet</option>
+            <option value="claude-opus-4-8">Opus</option>
+          </select>
         </div>
         <button
           onClick={handleEnqueue}
@@ -175,7 +188,7 @@ export function DiscoverQueuePane() {
                 {run.prompt ? run.prompt : <span style={{ color: '#9ca3af' }}>no prompt</span>}
               </div>
               <div style={{ color: '#9ca3af', fontSize: 11, marginTop: 2 }}>
-                find {run.count} · {new Date(run.created_at).toLocaleTimeString()}
+                find {run.count} · {(['haiku', 'sonnet', 'opus'] as const).find(k => run.model?.includes(k)) ?? run.model} · {new Date(run.created_at).toLocaleTimeString()}
               </div>
 {run.discovered_companies && run.discovered_companies.length > 0 && (
                 <button
@@ -222,23 +235,6 @@ export function DiscoverQueuePane() {
               }}>
                 {liveLog}
                 <span ref={logEndRef} />
-              </pre>
-            )}
-            {expanded === run.id && run.output && run.status !== 'running' && (
-              <pre style={{
-                margin: 0,
-                padding: '8px 12px',
-                background: '#1f2937',
-                color: '#d1fae5',
-                fontSize: 10,
-                overflowX: 'auto',
-                maxHeight: 200,
-                overflowY: 'auto',
-                borderTop: '1px solid #374151',
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-all',
-              }}>
-                {run.output}
               </pre>
             )}
           </div>
