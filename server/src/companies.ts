@@ -4,24 +4,28 @@ import path from 'path'
 import yaml from 'js-yaml'
 
 type Company = Record<string, unknown> & { company: string }
+type CompanyWithFile = Company & { _file: string }
 
-function loadCompanies(dataDir: string): Company[] {
+function loadCompanies(dataDir: string): CompanyWithFile[] {
   return fs
     .readdirSync(dataDir)
     .filter(f => f.endsWith('.yaml'))
-    .map(f => yaml.load(fs.readFileSync(path.join(dataDir, f), 'utf8')) as Company)
+    .map(f => {
+      const company = yaml.load(fs.readFileSync(path.join(dataDir, f), 'utf8')) as Company
+      return { ...company, _file: f }
+    })
 }
 
-function saveCompany(dataDir: string, company: Company): void {
-  const file = path.join(dataDir, `${company.company.toLowerCase()}.yaml`)
-  fs.writeFileSync(file, yaml.dump(company), 'utf8')
+function saveCompany(dataDir: string, company: CompanyWithFile): void {
+  const { _file, ...rest } = company
+  fs.writeFileSync(path.join(dataDir, _file), yaml.dump(rest), 'utf8')
 }
 
 export function companiesRouter(dataDir: string) {
   const router = Router()
 
   router.get('/', (_req, res) => {
-    res.json(loadCompanies(dataDir))
+    res.json(loadCompanies(dataDir).map(({ _file: _f, ...c }) => c))
   })
 
   router.patch('/:name', (req, res) => {
@@ -35,7 +39,8 @@ export function companiesRouter(dataDir: string) {
     }
     Object.assign(company, req.body)
     saveCompany(dataDir, company)
-    res.json(company)
+    const { _file: _f, ...rest } = company
+    res.json(rest)
   })
 
   return router

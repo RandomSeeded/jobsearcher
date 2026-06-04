@@ -23,8 +23,10 @@ export interface DiscoverRun {
   status: 'pending' | 'running' | 'done' | 'failed'
   created_at: string
   run_at: string | null
+  log_path?: string
   output?: string
   output_summary?: string
+  discovered_companies?: string[]
 }
 
 export async function fetchQueue(): Promise<DiscoverRun[]> {

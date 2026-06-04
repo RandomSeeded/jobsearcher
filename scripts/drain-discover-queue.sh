@@ -20,7 +20,7 @@ for r in runs:
 
 for ID in $PENDING; do
   echo "$(date -u +%FT%TZ) triggering run $ID"
-  curl -sf -X POST "http://localhost:$PORT/api/discover-queue/$ID/run" > /dev/null
+  curl -sf -X POST "http://localhost:$PORT/api/discover-queue/$ID/run?source=scheduled" > /dev/null
   # Wait for it to finish before starting the next (server enforces one-at-a-time too)
   while true; do
     STATUS=$(curl -sf "http://localhost:$PORT/api/discover-queue" | \

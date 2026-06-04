@@ -14,6 +14,10 @@ const VOTE_EMOJI: Record<string, string> = {
 
 const VOTES: Vote[] = ['love', 'like', 'neutral', 'not_sure_yet', 'dislike']
 
+function toTitleCase(s: string) {
+  return s.replace(/\w\S*/g, w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+}
+
 function stars(n?: number) {
   if (!n) return '—'
   return '★'.repeat(n) + '☆'.repeat(5 - n)
@@ -78,7 +82,8 @@ export function Browser() {
   }
 
   const loved = companies.filter(c => c.vote === 'love' || c.vote === 'like')
-  const others = companies.filter(c => c.vote !== 'love' && c.vote !== 'like')
+  const others = companies.filter(c => c.vote && c.vote !== 'love' && c.vote !== 'like')
+  const uncategorized = companies.filter(c => !c.vote)
 
   const paletteResults = paletteOpen
     ? companies.filter(c =>
@@ -107,8 +112,19 @@ export function Browser() {
           </>
         )}
 
-        <h2>Others</h2>
-        <CompanyGrid companies={others} onSelect={setSelected} />
+        {others.length > 0 && (
+          <>
+            <h2>Others</h2>
+            <CompanyGrid companies={others} onSelect={setSelected} />
+          </>
+        )}
+
+        {uncategorized.length > 0 && (
+          <>
+            <h2>Uncategorized</h2>
+            <CompanyGrid companies={uncategorized} onSelect={setSelected} />
+          </>
+        )}
       </div>
 
       {/* Insights sidebar */}
@@ -125,6 +141,8 @@ export function Browser() {
           <h3 style={{ marginTop: 0 }}>At a glance</h3>
           <p>Total tracked: <strong>{companies.length}</strong></p>
           <p>Love + like: <strong>{loved.length}</strong></p>
+          <p>Others: <strong>{others.length}</strong></p>
+          <p>Uncategorized: <strong>{uncategorized.length}</strong></p>
           <p>In pipeline: <strong>{inPipeline}</strong></p>
         </div>
         <div>
@@ -180,13 +198,17 @@ export function Browser() {
         >
           <button onClick={() => setSelected(null)} style={{ float: 'right', cursor: 'pointer' }}>✕ Close</button>
           <h2 style={{ marginTop: 0 }}>{selected.company}</h2>
+          {selected.terse && <p style={{ color: '#6b7280', marginTop: 0 }}>{selected.terse}</p>}
           {selected.link && <a href={selected.link} target="_blank" rel="noreferrer">{selected.link}</a>}
           <dl style={{ lineHeight: 2 }}>
             <dt>Location</dt><dd>{selected.location ?? '—'}</dd>
             <dt>Employees</dt><dd>{selected.employees ?? '—'}</dd>
-            <dt>Quality</dt><dd>{stars(selected.company_quality)}</dd>
             <dt>Stage</dt><dd>{selected.stage ?? '—'}</dd>
-            <dt>AI category</dt><dd>{selected.ai_category ?? '—'}</dd>
+            {selected.fundraising && <><dt>Fundraising</dt><dd>{selected.fundraising}</dd></>}
+            <dt>Quality</dt><dd>{stars(selected.company_quality)}</dd>
+            {selected.ai_category && selected.ai_category !== 'none' && (
+              <><dt>AI layer</dt><dd>{AI_LAYER_SHORT[selected.ai_category] ?? selected.ai_category}</dd></>
+            )}
           </dl>
           <p style={{ whiteSpace: 'pre-wrap' }}>{selected.notes}</p>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: '1rem' }}>
@@ -300,37 +322,84 @@ export function Browser() {
   )
 }
 
+const OFFER_STAGES = new Set(['OFFER', 'Rejected Offer'])
+const REJECTION_STAGES = new Set(['Rejected me'])
+
+function stageAccent(stage?: string): string {
+  if (!stage) return '#e5e7eb'
+  if (OFFER_STAGES.has(stage)) return '#22c55e'
+  if (REJECTION_STAGES.has(stage)) return '#ef4444'
+  return '#e5e7eb'
+}
+
+const AI_LAYER_SHORT: Record<string, string> = {
+  'ai application layer': 'app layer',
+  'ai tooling layer': 'tooling',
+  'ai data layer': 'data layer',
+  'ai infrastructure': 'infra',
+  'ai model companies': 'models',
+}
+
 function CompanyGrid({ companies, onSelect }: { companies: Company[]; onSelect: (c: Company) => void }) {
   return (
     <div style={{
       display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+      gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
       gap: '1rem',
       marginBottom: '2rem',
     }}>
-      {companies.map(c => (
-        <button
-          key={c.company}
-          onClick={() => onSelect(c)}
-          style={{
-            textAlign: 'left',
-            border: '1px solid #e5e7eb',
-            borderRadius: 10,
-            padding: '1rem',
-            background: '#fff',
-            cursor: 'pointer',
-            transition: 'box-shadow .15s',
-          }}
-          onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,.08)')}
-          onMouseLeave={e => (e.currentTarget.style.boxShadow = '')}
-        >
-          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>{c.company}</div>
-          <div style={{ color: '#6b7280', fontSize: 13, marginBottom: 6 }}>
-            {c.vote ? VOTE_EMOJI[c.vote] : '○'} {c.ai_category}
-          </div>
-          <div style={{ color: '#f59e0b', fontSize: 12 }}>{stars(c.company_quality)}</div>
-        </button>
-      ))}
+      {companies.map(c => {
+        const accent = stageAccent(c.stage)
+        const aiShort = c.ai_category && c.ai_category !== 'none' ? (AI_LAYER_SHORT[c.ai_category] ?? c.ai_category) : null
+        const qualityStr = c.company_quality ? stars(c.company_quality)! : null
+        return (
+          <button
+            key={c.company}
+            onClick={() => onSelect(c)}
+            style={{
+              textAlign: 'left',
+              border: '1px solid #e5e7eb',
+              borderRadius: 10,
+              overflow: 'hidden',
+              background: '#fff',
+              cursor: 'pointer',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,.1)')}
+            onMouseLeave={e => (e.currentTarget.style.boxShadow = '')}
+          >
+            <div style={{ height: 4, background: accent }} />
+            <div style={{ padding: '0.9rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+                <div style={{ fontWeight: 700, fontSize: 15, lineHeight: 1.3 }}>{c.company}</div>
+                <span style={{ fontSize: 18, lineHeight: 1 }}>{c.vote ? VOTE_EMOJI[c.vote] : '○'}</span>
+              </div>
+              <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 10, lineHeight: 1.4, minHeight: '1.4em' }}>
+                {c.terse ?? <span style={{ color: '#d1d5db' }}>—</span>}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 8px', fontSize: 11 }}>
+                <Fact label="People" value={c.employees ?? '--'} dim={!c.employees} />
+                <Fact label="Funding" value={c.fundraising ?? '--'} dim={!c.fundraising} />
+                <Fact label="AI layer" value={aiShort ?? '--'} dim={!aiShort} />
+                <Fact label="Quality" value={qualityStr ?? '--'} dim={!qualityStr} />
+              </div>
+            </div>
+            <div style={{ marginTop: 'auto', borderTop: '1px solid #f3f4f6', padding: '6px 0', textAlign: 'center', fontSize: 11, color: '#9ca3af' }}>
+              {c.stage ? toTitleCase(c.stage) : '—'}
+            </div>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function Fact({ label, value, dim }: { label: string; value: string; dim?: boolean }) {
+  return (
+    <div>
+      <div style={{ color: '#9ca3af', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>
+      <div style={{ color: dim ? '#d1d5db' : '#374151', fontWeight: 500 }}>{value}</div>
     </div>
   )
 }

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { fetchCompanies, patchCompany } from './api'
 import type { Company, Vote } from './types'
 
@@ -145,10 +145,13 @@ export function Triage() {
   const [sessionVoted, setSessionVoted] = useState<Company[]>([])
   const [selected, setSelected] = useState<Company | null>(null)
   const sessionTotalRef = useRef(0)
+  const [searchParams] = useSearchParams()
 
   useEffect(() => {
+    const filter = searchParams.get('companies')
+    const names = filter ? new Set(filter.split(',').map(decodeURIComponent)) : null
     fetchCompanies().then(all => {
-      const nyr = all.filter(c => !c.vote)
+      const nyr = all.filter(c => names ? names.has(c.company) : !c.vote)
       sessionTotalRef.current = 0
       setQueue(nyr)
       if (nyr.length > 0) setSelected(nyr[0])

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { fetchQueue, enqueueRun, triggerRun, deleteRun, type DiscoverRun } from './api'
 
 const STATUS_COLOR: Record<DiscoverRun['status'], string> = {
@@ -14,6 +15,7 @@ export function DiscoverQueuePane() {
   const [count, setCount] = useState(5)
   const [expanded, setExpanded] = useState<string | null>(null)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const navigate = useNavigate()
 
   const isRunning = runs.some(r => r.status === 'running')
 
@@ -161,8 +163,32 @@ export function DiscoverQueuePane() {
               <div style={{ color: '#9ca3af', fontSize: 11, marginTop: 2 }}>
                 find {run.count} · {new Date(run.created_at).toLocaleTimeString()}
               </div>
-              {run.output_summary && (
-                <div style={{ marginTop: 4, color: '#16a34a', fontSize: 11 }}>{run.output_summary}</div>
+{run.discovered_companies && run.discovered_companies.length > 0 && (
+                <button
+                  onClick={e => {
+                    e.stopPropagation()
+                    navigate(`/triage?companies=${run.discovered_companies!.map(encodeURIComponent).join(',')}`)
+                  }}
+                  style={{
+                    marginTop: 6,
+                    display: 'block',
+                    width: '100%',
+                    textAlign: 'left',
+                    background: '#f0fdf4',
+                    color: '#16a34a',
+                    border: '1px solid #bbf7d0',
+                    borderRadius: 5,
+                    padding: '4px 8px',
+                    fontSize: 11,
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                  }}
+                >
+                  View {run.discovered_companies.length} {run.discovered_companies.length === 1 ? 'company' : 'companies'} →
+                </button>
+              )}
+              {run.output_summary && (!run.discovered_companies || run.discovered_companies.length === 0) && (
+                <div style={{ marginTop: 4, color: '#9ca3af', fontSize: 11 }}>{run.output_summary}</div>
               )}
             </div>
 
