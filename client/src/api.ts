@@ -1,5 +1,14 @@
 import type { Company } from './types'
 
+export interface PreferenceItem { short: string; text: string; confidence: number }
+export interface Preferences { likes: PreferenceItem[]; dislikes: PreferenceItem[]; generatedAt: string | null }
+
+export async function fetchPreferences(): Promise<Preferences> {
+  const res = await fetch('/api/preferences')
+  if (!res.ok) throw new Error('Failed to fetch preferences')
+  return res.json()
+}
+
 export async function fetchCompanies(): Promise<Company[]> {
   const res = await fetch('/api/companies')
   if (!res.ok) throw new Error('Failed to fetch companies')
@@ -53,4 +62,10 @@ export async function triggerRun(id: string): Promise<DiscoverRun> {
 
 export async function deleteRun(id: string): Promise<void> {
   await fetch(`/api/discover-queue/${id}`, { method: 'DELETE' })
+}
+
+export async function fetchRunLog(id: string): Promise<string> {
+  const res = await fetch(`/api/discover-queue/${id}/log`)
+  if (!res.ok) throw new Error('no log')
+  return res.text()
 }

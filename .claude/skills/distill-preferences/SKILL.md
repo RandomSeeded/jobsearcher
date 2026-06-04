@@ -40,10 +40,12 @@ Overwrite `/data/preferences.md`:
 _Generated {YYYY-MM-DD} from {N} liked, {M} disliked, {K} neutral companies._
 
 ## Likes
-- {atomic signal} (confidence: {0.0–1.0})
+- **{short label}**: {atomic signal} (confidence: {0.0–1.0})
 
 ## Dislikes
-- {atomic signal} (confidence: {0.0–1.0})
+- **{short label}**: {atomic signal} (confidence: {0.0–1.0})
 ```
 
 Sort each list by confidence descending.
+
+`short label` is a 2–5 word noun phrase suitable for a UI tag — no sentence fragments, no trailing punctuation. Example: "AI tooling layer", "Tier-1 investors", "Developer-facing products".

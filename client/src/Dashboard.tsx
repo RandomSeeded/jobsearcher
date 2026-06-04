@@ -1,34 +1,16 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { fetchCompanies, patchCompany, enqueueRun } from './api'
+import { fetchCompanies, fetchPreferences, patchCompany, enqueueRun } from './api'
+import type { Preferences } from './api'
 import { CompanyDetailPane } from './CompanyDetailPane'
 import { CommandPalette } from './CommandPalette'
 import { DiscoverQueuePane } from './DiscoverQueuePane'
 import { VOTE_EMOJI, toTitleCase, stars, AI_LAYER_SHORT, Fact } from './display-utils'
 import type { Company, Vote } from './types'
 
-function computeGlanceTags(companies: Company[]) {
-  const catScore: Record<string, number> = {}
-  const locScore: Record<string, number> = {}
-
-  for (const c of companies) {
-    if (c.vote !== 'love' && c.vote !== 'like') continue
-    const w = c.vote === 'love' ? 2 : 1
-    if (c.ai_category && c.ai_category !== 'none') {
-      catScore[c.ai_category] = (catScore[c.ai_category] ?? 0) + w
-    }
-    if (c.location && c.location !== 'Unknown') {
-      locScore[c.location] = (locScore[c.location] ?? 0) + w
-    }
-  }
-
-  const topCats = Object.entries(catScore).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k]) => k)
-  const topLocs = Object.entries(locScore).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([k]) => k)
-  return [...topCats, ...topLocs]
-}
-
 export function Dashboard() {
   const [companies, setCompanies] = useState<Company[]>([])
+  const [preferences, setPreferences] = useState<Preferences | null>(null)
   const [selected, setSelected] = useState<Company | null>(null)
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -36,6 +18,7 @@ export function Dashboard() {
 
   useEffect(() => {
     fetchCompanies().then(setCompanies)
+    fetchPreferences().then(setPreferences).catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -66,14 +49,22 @@ export function Dashboard() {
   }
 
   const loved = companies.filter(c => c.vote === 'love' || c.vote === 'like')
-  const others = companies.filter(c => c.vote && c.vote !== 'love' && c.vote !== 'like')
+  const disliked = companies.filter(c => c.vote === 'dislike' || c.vote === 'neutral')
   const uncategorized = companies.filter(c => !c.vote)
-  const inPipeline = companies.filter(c => c.stage && !['', 'Unknown'].includes(c.stage)).length
+
 
   return (
     <div style={{ display: 'flex', height: '100vh', fontFamily: 'system-ui, sans-serif' }}>
       <div style={{ flex: 1, overflow: 'auto', padding: '1.5rem' }}>
-        <h1 style={{ marginTop: 0 }}>Job Search</h1>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '1rem' }}>
+          <h1 style={{ marginTop: 0, marginBottom: 0 }}>Job Search</h1>
+          <button
+            onClick={() => navigate('/triage')}
+            className="text-blue-600 hover:text-blue-800 text-sm cursor-pointer bg-transparent border-0 p-0"
+          >
+            Start triage →
+          </button>
+        </div>
 
         {loved.length > 0 && (
           <>
@@ -82,10 +73,10 @@ export function Dashboard() {
           </>
         )}
 
-        {others.length > 0 && (
+        {disliked.length > 0 && (
           <>
-            <h2>Others</h2>
-            <CompanyGrid companies={others} onSelect={setSelected} />
+            <h2>Disliked</h2>
+            <CompanyGrid companies={disliked} onSelect={setSelected} />
           </>
         )}
 
@@ -97,7 +88,7 @@ export function Dashboard() {
         )}
       </div>
 
-      <div className="flex shrink-0 w-[580px] border-l border-gray-200 overflow-hidden h-screen">
+      <div className="flex shrink-0 w-[430px] border-l border-gray-200 overflow-hidden h-screen">
         {selected ? (
           <CompanyDetailPane
             company={selected}
@@ -106,47 +97,31 @@ export function Dashboard() {
             onFindMore={handleFindMore}
           />
         ) : (
-          <>
-            <aside className="w-[280px] flex flex-col gap-6 p-6 bg-gray-50 border-r border-gray-200 overflow-y-auto">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">At a glance</p>
-                <div className="space-y-2">
-                  {[
-                    ['Total tracked', companies.length],
-                    ['Love + like',   loved.length],
-                    ['Others',        others.length],
-                    ['Uncategorized', uncategorized.length],
-                    ['In pipeline',   inPipeline],
-                  ].map(([label, value]) => (
-                    <div key={label as string} className="flex justify-between items-baseline">
-                      <span className="text-sm text-gray-500">{label}</span>
-                      <span className="text-sm font-semibold text-gray-800 tabular-nums">{value}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">You favor</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {computeGlanceTags(companies).map(tag => (
-                    <span key={tag} className="bg-blue-50 text-blue-700 text-xs rounded-full px-2.5 py-0.5">{tag}</span>
-                  ))}
-                  {computeGlanceTags(companies).length === 0 && (
-                    <span className="text-xs text-gray-400">Vote on companies to see preferences</span>
-                  )}
-                </div>
-              </div>
-
-              <button
-                onClick={() => navigate('/triage')}
-                className="mt-auto bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg px-4 py-2.5 cursor-pointer border-0"
-              >
-                Start triage
-              </button>
-            </aside>
+          <aside className="w-full flex flex-col gap-6 p-6 bg-gray-50 overflow-y-auto">
             <DiscoverQueuePane />
-          </>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">Learned preferences</p>
+              <div className="flex flex-wrap gap-1">
+                {preferences && [
+                  ...preferences.likes.map(p => ({ ...p, kind: 'like' as const })),
+                  ...preferences.dislikes.map(p => ({ ...p, kind: 'dislike' as const })),
+                ].sort((a, b) => b.confidence - a.confidence).map(p => (
+                  <span
+                    key={p.text}
+                    title={p.text}
+                    className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 ${p.kind === 'like' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}
+                    style={{ fontSize: '10px' }}
+                  >
+                    {p.short}
+                    <span className="opacity-50">{Math.round(p.confidence * 100)}%</span>
+                  </span>
+                ))}
+                {!preferences && (
+                  <span className="text-gray-400" style={{ fontSize: '10px' }}>Run /distill-preferences to generate</span>
+                )}
+              </div>
+            </div>
+          </aside>
         )}
       </div>
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { fetchQueue, enqueueRun, triggerRun, deleteRun, type DiscoverRun } from './api'
+import { fetchQueue, enqueueRun, triggerRun, deleteRun, fetchRunLog, type DiscoverRun } from './api'
 
 const STATUS_COLOR: Record<DiscoverRun['status'], string> = {
   pending: '#6b7280',
@@ -14,10 +14,14 @@ export function DiscoverQueuePane() {
   const [prompt, setPrompt] = useState('')
   const [count, setCount] = useState(5)
   const [expanded, setExpanded] = useState<string | null>(null)
+  const [liveLog, setLiveLog] = useState<string>('')
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const logIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const logEndRef = useRef<HTMLPreElement | null>(null)
   const navigate = useNavigate()
 
   const isRunning = runs.some(r => r.status === 'running')
+  const runningRun = runs.find(r => r.status === 'running')
 
   function schedulePoll() {
     if (intervalRef.current) clearInterval(intervalRef.current)
@@ -36,6 +40,19 @@ export function DiscoverQueuePane() {
     schedulePoll()
     return () => { if (intervalRef.current) clearInterval(intervalRef.current) }
   }, [isRunning])
+
+  useEffect(() => {
+    if (logIntervalRef.current) clearInterval(logIntervalRef.current)
+    if (!runningRun) { setLiveLog(''); return }
+    const poll = () => fetchRunLog(runningRun.id).then(setLiveLog).catch(() => {})
+    poll()
+    logIntervalRef.current = setInterval(poll, 2000)
+    return () => { if (logIntervalRef.current) clearInterval(logIntervalRef.current) }
+  }, [runningRun?.id])
+
+  useEffect(() => {
+    if (logEndRef.current) logEndRef.current.scrollIntoView({ behavior: 'smooth' })
+  }, [liveLog])
 
   async function handleEnqueue() {
     const run = await enqueueRun(prompt.trim() || undefined, count)
@@ -56,11 +73,8 @@ export function DiscoverQueuePane() {
 
   return (
     <div style={{
-      width: 300,
-      borderLeft: '1px solid #e5e7eb',
       display: 'flex',
       flexDirection: 'column',
-      background: '#fafafa',
       fontSize: 13,
     }}>
       <div style={{ padding: '1rem', borderBottom: '1px solid #e5e7eb' }}>
@@ -192,7 +206,7 @@ export function DiscoverQueuePane() {
               )}
             </div>
 
-            {expanded === run.id && run.output && (
+            {run.status === 'running' && liveLog && (
               <pre style={{
                 margin: 0,
                 padding: '8px 12px',
@@ -203,6 +217,26 @@ export function DiscoverQueuePane() {
                 maxHeight: 200,
                 overflowY: 'auto',
                 borderTop: '1px solid #374151',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-all',
+              }}>
+                {liveLog}
+                <span ref={logEndRef} />
+              </pre>
+            )}
+            {expanded === run.id && run.output && run.status !== 'running' && (
+              <pre style={{
+                margin: 0,
+                padding: '8px 12px',
+                background: '#1f2937',
+                color: '#d1fae5',
+                fontSize: 10,
+                overflowX: 'auto',
+                maxHeight: 200,
+                overflowY: 'auto',
+                borderTop: '1px solid #374151',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-all',
               }}>
                 {run.output}
               </pre>

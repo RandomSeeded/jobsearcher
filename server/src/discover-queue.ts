@@ -96,6 +96,7 @@ function executeRun(run: DiscoverRun, dataDir: string, model = 'claude-haiku-4-5
     '-p', `/discover-jobs ${promptArg}`,
     '--model', model,
     '--allowedTools', 'Bash,Read,Write,WebSearch,WebFetch,Agent',
+    '--verbose',
   ], { cwd: process.cwd(), stdio: ['ignore', 'pipe', 'pipe'] })
 
   const TIMEOUT_MS = 30 * 60 * 1000 // 30 min
@@ -167,6 +168,17 @@ export function discoverQueueRouter(dataDir: string) {
     const model = scheduled ? 'claude-sonnet-4-6' : 'claude-haiku-4-5-20251001'
     executeRun(run, dataDir, model)
     res.json(run)
+  })
+
+  router.get('/:id/log', (req, res) => {
+    const queue = loadQueue(dataDir)
+    const run = queue.find(r => r.id === req.params.id)
+    if (!run || !run.log_path) return res.status(404).json({ error: 'no log' })
+    try {
+      res.type('text/plain').send(readFileSync(run.log_path, 'utf8'))
+    } catch {
+      res.status(404).json({ error: 'log file not found' })
+    }
   })
 
   router.delete('/:id', (req, res) => {
