@@ -212,7 +212,7 @@ export function Triage() {
         background: '#fafafa',
       }}>
         <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid #e5e7eb' }}>
-          <Link to="/" style={{ fontSize: 13, color: '#6b7280' }}>← Browser</Link>
+          <Link to="/" style={{ fontSize: 13, color: '#6b7280' }}>← Dashboard</Link>
           <h2 style={{ margin: '0.5rem 0 0', fontSize: 16 }}>Decision Queue</h2>
           <p style={{ margin: '4px 0 0', fontSize: 13, color: '#6b7280' }}>
             {remaining} of {queue.length} remaining

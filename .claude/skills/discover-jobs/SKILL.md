@@ -66,6 +66,16 @@ Move the 5 selected files from `/data/raw/` to `/data/contenders/`. All other fi
 
 If running interactively, suggest the user run `/vote-jobs` to rate the new contenders. If running non-interactively (stdin is not a TTY / invoked via `-p`), skip any prompting and exit immediately after promoting — do not wait for user input.
 
+### 6. Write discovery manifest
+
+After promoting, write `/data/discover-manifest.json` with the list of slugs that were promoted:
+
+```json
+{ "promoted": ["slug1", "slug2", "slug3", "slug4", "slug5"] }
+```
+
+Slugs are filenames without the `.yaml` extension. This file is read by the server to determine what was discovered. Always overwrite it — runs are serial and there is no concurrent access.
+
 ---
 
 ## YAML schema (for subagents writing `/data/raw/<slug>.yaml`)

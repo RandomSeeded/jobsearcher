@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { spawn } from 'child_process'
-import { readFileSync, writeFileSync, existsSync, readdirSync, createWriteStream, mkdirSync } from 'fs'
+import { readFileSync, writeFileSync, existsSync, createWriteStream, mkdirSync } from 'fs'
 import { join } from 'path'
 import { randomUUID } from 'crypto'
 import yaml from 'js-yaml'
@@ -36,9 +36,28 @@ function saveQueue(dataDir: string, queue: DiscoverRun[]) {
   writeFileSync(queuePath(dataDir), JSON.stringify(queue, null, 2))
 }
 
-function countYamlFiles(dataDir: string): number {
-  if (!existsSync(dataDir)) return 0
-  return readdirSync(dataDir).filter(f => f.endsWith('.yaml')).length
+function manifestPath(dataDir: string) {
+  return join(dataDir, '..', 'discover-manifest.json')
+}
+
+function readManifest(dataDir: string): { slugs: string[]; names: string[] } {
+  const p = manifestPath(dataDir)
+  if (!existsSync(p)) return { slugs: [], names: [] }
+  try {
+    const { promoted } = JSON.parse(readFileSync(p, 'utf8')) as { promoted?: string[] }
+    const slugs = promoted ?? []
+    const names = slugs.map(slug => {
+      try {
+        const doc = yaml.load(readFileSync(join(dataDir, `${slug}.yaml`), 'utf8')) as { company?: string }
+        return doc?.company ?? slug
+      } catch {
+        return slug
+      }
+    })
+    return { slugs, names }
+  } catch {
+    return { slugs: [], names: [] }
+  }
 }
 
 function logPath(dataDir: string, id: string) {
@@ -69,7 +88,6 @@ function executeRun(run: DiscoverRun, dataDir: string, model = 'claude-haiku-4-5
   entry.log_path = logPath(dataDir, run.id)
   saveQueue(dataDir, queue)
 
-  const beforeCount = countYamlFiles(dataDir)
   const promptArg = buildPromptArg(run)
   const log = createWriteStream(logPath(dataDir, run.id), { flags: 'a' })
   log.write(`[${new Date().toISOString()}] starting run ${run.id}\nprompt: ${promptArg}\nmodel: ${model}\n\n`)
@@ -99,23 +117,10 @@ function executeRun(run: DiscoverRun, dataDir: string, model = 'claude-haiku-4-5
     if (e) {
       e.status = code === 0 ? 'done' : 'failed'
       e.output = output
-      const afterCount = countYamlFiles(dataDir)
-      const newCount = afterCount - beforeCount
-      if (newCount > 0) {
-        const newSlugs = readdirSync(dataDir)
-          .filter(f => f.endsWith('.yaml'))
-          .slice(-newCount)
-          .map(f => f.replace('.yaml', ''))
-        const newNames = newSlugs.map(slug => {
-          try {
-            const doc = yaml.load(readFileSync(join(dataDir, `${slug}.yaml`), 'utf8')) as { company?: string }
-            return doc?.company ?? slug
-          } catch {
-            return slug
-          }
-        })
-        e.discovered_companies = newNames
-        e.output_summary = `${newCount} new ${newCount === 1 ? 'company' : 'companies'}: ${newSlugs.join(', ')}`
+      const { slugs, names } = readManifest(dataDir)
+      if (slugs.length > 0) {
+        e.discovered_companies = names
+        e.output_summary = `${slugs.length} new ${slugs.length === 1 ? 'company' : 'companies'}: ${slugs.join(', ')}`
       } else {
         e.discovered_companies = []
         e.output_summary = 'No new companies added'

@@ -4,43 +4,50 @@ import path from 'path'
 import yaml from 'js-yaml'
 
 type Company = Record<string, unknown> & { company: string }
-type CompanyWithFile = Company & { _file: string }
 
-function loadCompanies(dataDir: string): CompanyWithFile[] {
-  return fs
-    .readdirSync(dataDir)
-    .filter(f => f.endsWith('.yaml'))
-    .map(f => {
-      const company = yaml.load(fs.readFileSync(path.join(dataDir, f), 'utf8')) as Company
-      return { ...company, _file: f }
-    })
-}
+function makeStore(dataDir: string) {
+  function fileFor(name: string): string | undefined {
+    return fs.readdirSync(dataDir)
+      .filter(f => f.endsWith('.yaml'))
+      .find(f => {
+        const doc = yaml.load(fs.readFileSync(path.join(dataDir, f), 'utf8')) as Company
+        return doc.company.toLowerCase() === name.toLowerCase()
+      })
+  }
 
-function saveCompany(dataDir: string, company: CompanyWithFile): void {
-  const { _file, ...rest } = company
-  fs.writeFileSync(path.join(dataDir, _file), yaml.dump(rest), 'utf8')
+  return {
+    list(): Company[] {
+      return fs.readdirSync(dataDir)
+        .filter(f => f.endsWith('.yaml'))
+        .map(f => yaml.load(fs.readFileSync(path.join(dataDir, f), 'utf8')) as Company)
+    },
+
+    patch(name: string, delta: Partial<Company>): Company | null {
+      const file = fileFor(name)
+      if (!file) return null
+      const company = yaml.load(fs.readFileSync(path.join(dataDir, file), 'utf8')) as Company
+      Object.assign(company, delta)
+      fs.writeFileSync(path.join(dataDir, file), yaml.dump(company), 'utf8')
+      return company
+    },
+  }
 }
 
 export function companiesRouter(dataDir: string) {
+  const store = makeStore(dataDir)
   const router = Router()
 
   router.get('/', (_req, res) => {
-    res.json(loadCompanies(dataDir).map(({ _file: _f, ...c }) => c))
+    res.json(store.list())
   })
 
   router.patch('/:name', (req, res) => {
-    const companies = loadCompanies(dataDir)
-    const company = companies.find(
-      c => c.company.toLowerCase() === req.params.name.toLowerCase()
-    )
+    const company = store.patch(req.params.name, req.body)
     if (!company) {
       res.status(404).json({ error: 'not found' })
       return
     }
-    Object.assign(company, req.body)
-    saveCompany(dataDir, company)
-    const { _file: _f, ...rest } = company
-    res.json(rest)
+    res.json(company)
   })
 
   return router
