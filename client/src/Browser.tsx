@@ -127,130 +127,137 @@ export function Browser() {
         )}
       </div>
 
-      {/* Insights sidebar */}
-      <aside style={{
-        width: 280,
-        borderLeft: '1px solid #e5e7eb',
-        padding: '1.5rem',
-        background: '#fafafa',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '1.5rem',
-      }}>
-        <div>
-          <h3 style={{ marginTop: 0 }}>At a glance</h3>
-          <p>Total tracked: <strong>{companies.length}</strong></p>
-          <p>Love + like: <strong>{loved.length}</strong></p>
-          <p>Others: <strong>{others.length}</strong></p>
-          <p>Uncategorized: <strong>{uncategorized.length}</strong></p>
-          <p>In pipeline: <strong>{inPipeline}</strong></p>
-        </div>
-        <div>
-          <h3>You favor</h3>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {preferenceProfile(companies).map(tag => (
-              <span key={tag} style={{
-                background: '#dbeafe',
-                color: '#1d4ed8',
-                borderRadius: 12,
-                padding: '2px 10px',
-                fontSize: 13,
-              }}>{tag}</span>
-            ))}
-            {preferenceProfile(companies).length === 0 && <span style={{ color: '#9ca3af' }}>Vote on companies to see preferences</span>}
-          </div>
-        </div>
-        <button
-          onClick={() => navigate('/triage')}
-          style={{
-            marginTop: 'auto',
-            background: '#2563eb',
-            color: '#fff',
-            border: 'none',
-            borderRadius: 8,
-            padding: '10px 16px',
-            cursor: 'pointer',
-            fontWeight: 600,
-          }}
-        >
-          Start triage
-        </button>
-      </aside>
-
-      {/* Drawer */}
-      {selected && (
+      {/* Right panel — detail view or insights+queue */}
+      <div className="flex shrink-0 w-[580px] border-l border-gray-200 overflow-hidden h-screen">
+      {selected ? (
         <div
           role="dialog"
           aria-label={selected.company}
-          style={{
-            position: 'fixed',
-            right: 280,
-            top: 0,
-            width: 420,
-            height: '100vh',
-            background: '#fff',
-            borderLeft: '1px solid #e5e7eb',
-            boxShadow: '-4px 0 24px rgba(0,0,0,.1)',
-            padding: '1.5rem',
-            overflow: 'auto',
-            zIndex: 10,
-          }}
+          className="flex flex-col flex-1 overflow-hidden bg-white"
         >
-          <button onClick={() => setSelected(null)} style={{ float: 'right', cursor: 'pointer' }}>✕ Close</button>
-          <h2 style={{ marginTop: 0 }}>{selected.company}</h2>
-          {selected.terse && <p style={{ color: '#6b7280', marginTop: 0 }}>{selected.terse}</p>}
-          {selected.link && <a href={selected.link} target="_blank" rel="noreferrer">{selected.link}</a>}
-          <dl style={{ lineHeight: 2 }}>
-            <dt>Location</dt><dd>{selected.location ?? '—'}</dd>
-            <dt>Employees</dt><dd>{selected.employees ?? '—'}</dd>
-            <dt>Stage</dt><dd>{selected.stage ?? '—'}</dd>
-            {selected.fundraising && <><dt>Fundraising</dt><dd>{selected.fundraising}</dd></>}
-            <dt>Quality</dt><dd>{stars(selected.company_quality)}</dd>
-            {selected.ai_category && selected.ai_category !== 'none' && (
-              <><dt>AI layer</dt><dd>{AI_LAYER_SHORT[selected.ai_category] ?? selected.ai_category}</dd></>
-            )}
-          </dl>
-          <p style={{ whiteSpace: 'pre-wrap' }}>{selected.notes}</p>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: '1rem' }}>
-            {VOTES.map(v => (
+          <div style={{ flex: 1, overflow: 'auto', padding: '1.5rem' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: 20 }}>{selected.company}</h2>
+                {selected.terse && <p style={{ margin: '4px 0 0', color: '#6b7280', fontSize: 13 }}>{selected.terse}</p>}
+              </div>
               <button
-                key={v}
-                aria-label={v}
-                onClick={() => handleVote(selected, v)}
-                style={{
-                  border: selected.vote === v ? '2px solid #2563eb' : '1px solid #d1d5db',
-                  borderRadius: 8,
-                  padding: '6px 12px',
-                  cursor: 'pointer',
-                  background: selected.vote === v ? '#eff6ff' : '#fff',
-                  fontWeight: selected.vote === v ? 700 : 400,
-                }}
-              >
-                {VOTE_EMOJI[v]} {v}
-              </button>
-            ))}
-          </div>
-          <button
-            onClick={() => handleFindMoreLike(selected)}
-            style={{
-              marginTop: '1rem',
-              width: '100%',
-              border: '1px solid #d1d5db',
-              borderRadius: 8,
-              padding: '8px 12px',
-              cursor: 'pointer',
-              background: '#f9fafb',
-              fontSize: 13,
-              color: '#374151',
-            }}
-          >
-            🔍 Find more like this
-          </button>
-        </div>
-      )}
+                onClick={() => setSelected(null)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: 18, lineHeight: 1, padding: 0 }}
+              >✕</button>
+            </div>
 
-      {/* Discover queue */}
-      <DiscoverQueuePane />
+            {selected.link && (
+              <a href={selected.link} target="_blank" rel="noreferrer" style={{ fontSize: 13, color: '#2563eb', display: 'block', marginBottom: '1.25rem' }}>
+                {selected.link}
+              </a>
+            )}
+
+            {/* Facts */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 16px', marginBottom: '1.25rem' }}>
+              <Fact label="Location" value={selected.location ?? '—'} dim={!selected.location} />
+              <Fact label="Employees" value={selected.employees ?? '—'} dim={!selected.employees} />
+              <Fact label="Stage" value={selected.stage ? toTitleCase(selected.stage) : '—'} dim={!selected.stage} />
+              <Fact label="Funding" value={selected.fundraising ?? '—'} dim={!selected.fundraising} />
+              <Fact label="Quality" value={stars(selected.company_quality) ?? '—'} dim={!selected.company_quality} />
+              {selected.ai_category && selected.ai_category !== 'none' && (
+                <Fact label="AI layer" value={AI_LAYER_SHORT[selected.ai_category] ?? selected.ai_category} />
+              )}
+            </div>
+
+            <hr style={{ border: 'none', borderTop: '1px solid #e5e7eb', margin: '0 0 1.25rem' }} />
+
+            {/* Notes */}
+            <p style={{ fontSize: 13, lineHeight: 1.7, color: '#374151', whiteSpace: 'pre-wrap', margin: '0 0 1.25rem' }}>
+              {selected.notes}
+            </p>
+
+            <hr style={{ border: 'none', borderTop: '1px solid #e5e7eb', margin: '0 0 1.25rem' }} />
+
+            {/* Vote */}
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: '1rem' }}>
+              {VOTES.map(v => (
+                <button
+                  key={v}
+                  aria-label={v}
+                  onClick={() => handleVote(selected, v)}
+                  style={{
+                    border: selected.vote === v ? '2px solid #2563eb' : '1px solid #d1d5db',
+                    borderRadius: 8,
+                    padding: '5px 11px',
+                    cursor: 'pointer',
+                    background: selected.vote === v ? '#eff6ff' : '#fff',
+                    fontWeight: selected.vote === v ? 600 : 400,
+                    fontSize: 13,
+                  }}
+                >
+                  {VOTE_EMOJI[v]} {v}
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={() => handleFindMoreLike(selected)}
+              style={{
+                width: '100%',
+                border: '1px solid #d1d5db',
+                borderRadius: 8,
+                padding: '8px 12px',
+                cursor: 'pointer',
+                background: '#f9fafb',
+                fontSize: 13,
+                color: '#374151',
+              }}
+            >
+              🔍 Find more like this
+            </button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <aside className="w-[280px] flex flex-col gap-6 p-6 bg-gray-50 border-r border-gray-200 overflow-y-auto">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">At a glance</p>
+              <div className="space-y-2">
+                {[
+                  ['Total tracked', companies.length],
+                  ['Love + like',   loved.length],
+                  ['Others',        others.length],
+                  ['Uncategorized', uncategorized.length],
+                  ['In pipeline',   inPipeline],
+                ].map(([label, value]) => (
+                  <div key={label as string} className="flex justify-between items-baseline">
+                    <span className="text-sm text-gray-500">{label}</span>
+                    <span className="text-sm font-semibold text-gray-800 tabular-nums">{value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">You favor</p>
+              <div className="flex flex-wrap gap-1.5">
+                {preferenceProfile(companies).map(tag => (
+                  <span key={tag} className="bg-blue-50 text-blue-700 text-xs rounded-full px-2.5 py-0.5">{tag}</span>
+                ))}
+                {preferenceProfile(companies).length === 0 && (
+                  <span className="text-xs text-gray-400">Vote on companies to see preferences</span>
+                )}
+              </div>
+            </div>
+
+            <button
+              onClick={() => navigate('/triage')}
+              className="mt-auto bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg px-4 py-2.5 cursor-pointer border-0"
+            >
+              Start triage
+            </button>
+          </aside>
+          <DiscoverQueuePane />
+        </>
+      )}
+      </div>
 
       {/* ⌘K palette */}
       {paletteOpen && (
