@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { fetchCompanies, patchCompany } from './api'
+import { fetchCompanies, patchCompany, enqueueRun } from './api'
+import { DiscoverQueuePane } from './DiscoverQueuePane'
 import type { Company, Vote } from './types'
 
 const VOTE_EMOJI: Record<string, string> = {
@@ -87,6 +88,11 @@ export function Browser() {
     : []
 
   const inPipeline = companies.filter(c => c.stage && !['', 'Unknown'].includes(c.stage)).length
+
+  async function handleFindMoreLike(company: Company) {
+    const prompt = `find more companies like ${company.company} — ${company.ai_category ?? 'AI'}, ~${company.employees ?? 'unknown'} employees, ${company.location ?? 'any location'}`
+    await enqueueRun(prompt, 5)
+  }
 
   return (
     <div style={{ display: 'flex', height: '100vh', fontFamily: 'system-ui, sans-serif' }}>
@@ -202,8 +208,27 @@ export function Browser() {
               </button>
             ))}
           </div>
+          <button
+            onClick={() => handleFindMoreLike(selected)}
+            style={{
+              marginTop: '1rem',
+              width: '100%',
+              border: '1px solid #d1d5db',
+              borderRadius: 8,
+              padding: '8px 12px',
+              cursor: 'pointer',
+              background: '#f9fafb',
+              fontSize: 13,
+              color: '#374151',
+            }}
+          >
+            🔍 Find more like this
+          </button>
         </div>
       )}
+
+      {/* Discover queue */}
+      <DiscoverQueuePane />
 
       {/* ⌘K palette */}
       {paletteOpen && (

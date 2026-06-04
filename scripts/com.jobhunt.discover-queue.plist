@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Install:
+    1. Wake Mac 1 min before midnight so launchd fires:
+       sudo pmset repeat wake MTWRFSU 23:59:00
+
+    2. Copy to LaunchAgents (replace PROJECT_ROOT with actual path):
+       sed 's|PROJECT_ROOT|/Users/natewillard/Projects/jobhunt|g' \
+         scripts/com.jobhunt.discover-queue.plist \
+         > ~/Library/LaunchAgents/com.jobhunt.discover-queue.plist
+
+    3. Load it:
+       launchctl load ~/Library/LaunchAgents/com.jobhunt.discover-queue.plist
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.jobhunt.discover-queue</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>PROJECT_ROOT/scripts/drain-discover-queue.sh</string>
+  </array>
+
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>0</integer>
+    <key>Minute</key>
+    <integer>0</integer>
+  </dict>
+
+  <key>WorkingDirectory</key>
+  <string>PROJECT_ROOT</string>
+
+  <key>StandardOutPath</key>
+  <string>PROJECT_ROOT/logs/discover-queue.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>PROJECT_ROOT/logs/discover-queue.log</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin</string>
+  </dict>
+</dict>
+</plist>

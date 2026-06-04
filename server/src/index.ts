@@ -1,10 +1,12 @@
 import express from 'express'
 import { companiesRouter } from './companies.js'
+import { discoverQueueRouter } from './discover-queue.js'
 
 export function buildApp(dataDir: string) {
   const app = express()
   app.use(express.json())
   app.use('/api/companies', companiesRouter(dataDir))
+  app.use('/api/discover-queue', discoverQueueRouter(dataDir))
   return app
 }
 
