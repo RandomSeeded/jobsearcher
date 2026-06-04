@@ -103,7 +103,7 @@ export function Browser() {
     <div style={{ display: 'flex', height: '100vh', fontFamily: 'system-ui, sans-serif' }}>
       {/* Main area */}
       <div style={{ flex: 1, overflow: 'auto', padding: '1.5rem' }}>
-        <h1 style={{ marginTop: 0 }}>Company Browser</h1>
+        <h1 style={{ marginTop: 0 }}>Job Search</h1>
 
         {loved.length > 0 && (
           <>

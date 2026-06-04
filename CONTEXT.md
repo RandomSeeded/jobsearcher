@@ -10,7 +10,7 @@ The user's personal preference for a company. One of: `love`, `like`, `neutral`,
 A freeform string classifying where a company sits in the AI stack. Known values: `none`, `ai application layer`, `ai tooling layer`, `ai data layer`, `ai model companies`. Not a strict enum — new values can be added as the landscape evolves.
 
 ## Preference Profile
-A derived summary of the user's tastes inferred from their [[Vote]] history. Currently computed at runtime from love/like companies (weighted: love=2, like=1) across [[AI Category]], location, and employee count. Will be persisted in a future iteration.
+A derived summary of the user's tastes inferred from their [[Vote]] history. Persisted in `/data/preferences.md` and generated on demand by the `distill-preferences` skill. Contains two lists — Likes and Dislikes — each entry atomic, independently actionable, and confidence-scored (0.0–1.0). Signals appearing in both liked and disliked companies are netted rather than listed in both. Neutral-voted companies suppress confidence for traits they share with either list.
 
 ## Decision Queue
 A focused UI for evaluating unrated contenders. Contains all companies whose [[Vote]] is absent (NYR) at session start. Skipping a company sets its vote to `not_sure_yet`, removing it from future queues. Companies voted on during a session remain visible in the queue list for that session so the user can revise decisions, but pre-existing votes are never surfaced. Session state is client-side only.
