@@ -66,7 +66,7 @@ export function Dashboard() {
 
   const loved = companies.filter(c => c.vote === 'love' || c.vote === 'like')
   const disliked = companies.filter(c => c.vote === 'dislike' || c.vote === 'neutral')
-  const uncategorized = companies.filter(c => !c.vote)
+  const uncategorized = companies.filter(c => !c.vote || c.vote === 'not_sure_yet')
 
 
   return (

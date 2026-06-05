@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { fetchCompanies, patchCompany } from './api'
+import { stars } from './display-utils'
 import type { Company, Vote } from './types'
 
 const VOTES: { value: Vote; label: string; emoji: string }[] = [
@@ -10,11 +11,6 @@ const VOTES: { value: Vote; label: string; emoji: string }[] = [
   { value: 'not_sure_yet', label: 'not sure yet', emoji: '🤔' },
   { value: 'dislike', label: 'dislike', emoji: '👎' },
 ]
-
-function stars(n?: number) {
-  if (!n) return '—'
-  return '★'.repeat(n) + '☆'.repeat(5 - n)
-}
 
 const dtStyle: React.CSSProperties = { fontWeight: 600, color: '#6b7280', fontSize: 13 }
 const ddStyle: React.CSSProperties = { marginLeft: 0, marginBottom: 4 }
@@ -51,8 +47,6 @@ function DetailPane({
     )
   }
 
-  const alreadyVoted = !!company.vote
-
   return (
     <div style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
       <h2 style={{ marginTop: 0 }}>{company.company}</h2>
@@ -87,24 +81,25 @@ function DetailPane({
         </div>
       )}
 
-      {!alreadyVoted && (
-        <div style={{ marginTop: '2rem', display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-          {VOTES.map((v, i) => (
-            <button
-              key={v.value}
-              onClick={() => onVote(v.value)}
-              style={{
-                border: '1px solid #d1d5db',
-                borderRadius: 8,
-                padding: '8px 16px',
-                cursor: 'pointer',
-                background: '#fff',
-                fontSize: 14,
-              }}
-            >
-              {v.emoji} {v.label} <kbd style={kbdStyle}>{i + 1}</kbd>
-            </button>
-          ))}
+      <div style={{ marginTop: '2rem', display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+        {VOTES.map((v, i) => (
+          <button
+            key={v.value}
+            onClick={() => onVote(v.value)}
+            style={{
+              border: company.vote === v.value ? '2px solid #2563eb' : '1px solid #d1d5db',
+              borderRadius: 8,
+              padding: '8px 16px',
+              cursor: 'pointer',
+              background: company.vote === v.value ? '#eff6ff' : '#fff',
+              fontWeight: company.vote === v.value ? 600 : 400,
+              fontSize: 14,
+            }}
+          >
+            {v.emoji} {v.label} {!company.vote && <kbd style={kbdStyle}>{i + 1}</kbd>}
+          </button>
+        ))}
+        {!company.vote && (
           <button
             onClick={onSkip}
             style={{
@@ -119,14 +114,8 @@ function DetailPane({
           >
             Skip <kbd style={kbdStyle}>S</kbd>
           </button>
-        </div>
-      )}
-
-      {alreadyVoted && (
-        <div style={{ marginTop: '2rem', color: '#6b7280', fontSize: 14 }}>
-          Voted: {VOTES.find(v => v.value === company.vote)?.emoji} {company.vote}
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }
@@ -142,9 +131,9 @@ const kbdStyle: React.CSSProperties = {
 
 export function Triage() {
   const [queue, setQueue] = useState<Company[]>([])
-  const [sessionVoted, setSessionVoted] = useState<Company[]>([])
   const [selected, setSelected] = useState<Company | null>(null)
   const sessionTotalRef = useRef(0)
+  const votingRef = useRef(false)
   const [searchParams] = useSearchParams()
 
   useEffect(() => {
@@ -158,15 +147,24 @@ export function Triage() {
     })
   }, [])
 
-  const remaining = queue.filter(c => !c.vote).length
+  const remaining = useMemo(() => queue.filter(c => !c.vote).length, [queue])
 
   async function handleVote(vote: Vote) {
-    if (!selected || selected.vote) return
-    const updated = await patchCompany(selected.company, { vote })
-    sessionTotalRef.current += 1
-    setQueue(q => q.map(c => c.company === updated.company ? updated : c))
-    setSessionVoted(sv => [...sv, updated])
-    advanceToNextNYR(updated.company)
+    if (!selected || votingRef.current) return
+    votingRef.current = true
+    const wasNYR = !selected.vote
+    try {
+      const updated = await patchCompany(selected.company, { vote })
+      if (wasNYR) sessionTotalRef.current += 1
+      setQueue(q => q.map(c => c.company === updated.company ? updated : c))
+      if (wasNYR) {
+        advanceToNextNYR(updated.company)
+      } else {
+        setSelected(updated)
+      }
+    } finally {
+      votingRef.current = false
+    }
   }
 
   async function handleSkip() {
@@ -174,7 +172,6 @@ export function Triage() {
     const updated = await patchCompany(selected.company, { vote: 'not_sure_yet' })
     sessionTotalRef.current += 1
     setQueue(q => q.map(c => c.company === updated.company ? updated : c))
-    setSessionVoted(sv => [...sv, updated])
     advanceToNextNYR(updated.company)
   }
 
@@ -188,7 +185,7 @@ export function Triage() {
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (!selected || selected.vote) return
+      if (!selected) return
       if (e.key === 's' || e.key === 'S') { handleSkip(); return }
       const idx = parseInt(e.key) - 1
       if (idx >= 0 && idx < VOTES.length) handleVote(VOTES[idx].value)
@@ -196,8 +193,6 @@ export function Triage() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [selected])
-
-  const listItems = [...queue, ...sessionVoted.filter(sv => !queue.find(q => q.company === sv.company))]
 
   const isDone = remaining === 0 && sessionTotalRef.current > 0
 
@@ -219,7 +214,7 @@ export function Triage() {
           </p>
         </div>
         <ul style={{ listStyle: 'none', margin: 0, padding: 0, overflowY: 'auto', flex: 1 }}>
-          {listItems.map(c => {
+          {queue.map(c => {
             const isVoted = !!c.vote
             const isSelected = selected?.company === c.company
             return (
@@ -241,7 +236,7 @@ export function Triage() {
               </li>
             )
           })}
-          {listItems.length === 0 && (
+          {queue.length === 0 && (
             <li style={{ padding: '1rem 1.25rem', color: '#9ca3af', fontSize: 14 }}>No companies to review.</li>
           )}
         </ul>

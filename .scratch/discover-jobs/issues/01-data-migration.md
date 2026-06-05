@@ -1,6 +1,6 @@
 # Data migration + server path update
 
-Status: ready-for-agent
+Status: done
 Category: chore
 
 ## What to build
