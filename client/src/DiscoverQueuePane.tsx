@@ -14,7 +14,6 @@ export function DiscoverQueuePane() {
   const [prompt, setPrompt] = useState('')
   const [count, setCount] = useState(5)
   const [model, setModel] = useState('claude-haiku-4-5-20251001')
-  const [expanded, setExpanded] = useState<string | null>(null)
   const [liveLog, setLiveLog] = useState<string>('')
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const logIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -23,32 +22,30 @@ export function DiscoverQueuePane() {
 
   const isRunning = runs.some(r => r.status === 'running')
   const runningRun = runs.find(r => r.status === 'running')
-
-  function schedulePoll() {
-    if (intervalRef.current) clearInterval(intervalRef.current)
-    const delay = isRunning ? 5000 : 30000
-    intervalRef.current = setInterval(async () => {
-      const fresh = await fetchQueue()
-      setRuns(fresh)
-    }, delay)
-  }
+  const displayLog = runningRun ? liveLog : ''
 
   useEffect(() => {
     fetchQueue().then(setRuns)
   }, [])
 
   useEffect(() => {
-    schedulePoll()
+    if (intervalRef.current) clearInterval(intervalRef.current)
+    const delay = isRunning ? 5000 : 30000
+    intervalRef.current = setInterval(async () => {
+      const fresh = await fetchQueue()
+      setRuns(fresh)
+    }, delay)
     return () => { if (intervalRef.current) clearInterval(intervalRef.current) }
   }, [isRunning])
 
   useEffect(() => {
     if (logIntervalRef.current) clearInterval(logIntervalRef.current)
-    if (!runningRun) { setLiveLog(''); return }
+    if (!runningRun) return
     const poll = () => fetchRunLog(runningRun.id).then(setLiveLog).catch(() => {})
     poll()
     logIntervalRef.current = setInterval(poll, 2000)
     return () => { if (logIntervalRef.current) clearInterval(logIntervalRef.current) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [runningRun?.id])
 
   useEffect(() => {
@@ -144,14 +141,7 @@ export function DiscoverQueuePane() {
         )}
         {[...runs].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 10).map(run => (
           <div key={run.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
-            <div
-              style={{ padding: '10px 12px', cursor: run.status === 'done' || run.status === 'failed' ? 'pointer' : 'default' }}
-              onClick={() => {
-                if (run.status === 'done' || run.status === 'failed') {
-                  setExpanded(e => e === run.id ? null : run.id)
-                }
-              }}
-            >
+            <div style={{ padding: '10px 12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
                 <span style={{ color: STATUS_COLOR[run.status], fontWeight: 600, fontSize: 11, textTransform: 'uppercase' }}>
                   {run.status === 'running' ? '⟳ running' : run.status}
@@ -190,7 +180,7 @@ export function DiscoverQueuePane() {
               <div style={{ color: '#9ca3af', fontSize: 11, marginTop: 2 }}>
                 find {run.count} · {(['haiku', 'sonnet', 'opus'] as const).find(k => run.model?.includes(k)) ?? run.model} · {new Date(run.created_at).toLocaleTimeString()}
               </div>
-{run.discovered_companies && run.discovered_companies.length > 0 && (
+              {run.discovered_companies && run.discovered_companies.length > 0 && (
                 <button
                   onClick={e => {
                     e.stopPropagation()
@@ -219,7 +209,7 @@ export function DiscoverQueuePane() {
               )}
             </div>
 
-            {run.status === 'running' && liveLog && (
+            {run.status === 'running' && displayLog && (
               <pre style={{
                 margin: 0,
                 padding: '8px 12px',
@@ -233,7 +223,7 @@ export function DiscoverQueuePane() {
                 whiteSpace: 'pre-wrap',
                 wordBreak: 'break-all',
               }}>
-                {liveLog}
+                {displayLog}
                 <span ref={logEndRef} />
               </pre>
             )}

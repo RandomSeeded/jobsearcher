@@ -132,7 +132,7 @@ const kbdStyle: React.CSSProperties = {
 export function Triage() {
   const [queue, setQueue] = useState<Company[]>([])
   const [selected, setSelected] = useState<Company | null>(null)
-  const sessionTotalRef = useRef(0)
+  const [sessionTotal, setSessionTotal] = useState(0)
   const votingRef = useRef(false)
   const [searchParams] = useSearchParams()
 
@@ -141,10 +141,11 @@ export function Triage() {
     const names = filter ? new Set(filter.split(',').map(decodeURIComponent)) : null
     fetchCompanies().then(all => {
       const nyr = all.filter(c => names ? names.has(c.company) : !c.vote)
-      sessionTotalRef.current = 0
+      setSessionTotal(0)
       setQueue(nyr)
       if (nyr.length > 0) setSelected(nyr[0])
     })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const remaining = useMemo(() => queue.filter(c => !c.vote).length, [queue])
@@ -155,7 +156,7 @@ export function Triage() {
     const wasNYR = !selected.vote
     try {
       const updated = await patchCompany(selected.company, { vote })
-      if (wasNYR) sessionTotalRef.current += 1
+      if (wasNYR) setSessionTotal(n => n + 1)
       setQueue(q => q.map(c => c.company === updated.company ? updated : c))
       if (wasNYR) {
         advanceToNextNYR(updated.company)
@@ -170,7 +171,7 @@ export function Triage() {
   async function handleSkip() {
     if (!selected || selected.vote) return
     const updated = await patchCompany(selected.company, { vote: 'not_sure_yet' })
-    sessionTotalRef.current += 1
+    setSessionTotal(n => n + 1)
     setQueue(q => q.map(c => c.company === updated.company ? updated : c))
     advanceToNextNYR(updated.company)
   }
@@ -192,9 +193,10 @@ export function Triage() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected])
 
-  const isDone = remaining === 0 && sessionTotalRef.current > 0
+  const isDone = remaining === 0 && sessionTotal > 0
 
   return (
     <div style={{ display: 'flex', height: '100vh', fontFamily: 'system-ui, sans-serif' }}>
@@ -245,7 +247,7 @@ export function Triage() {
       {/* Right: detail */}
       <DetailPane
         company={isDone ? null : selected}
-        sessionTotal={sessionTotalRef.current}
+        sessionTotal={sessionTotal}
         remaining={remaining}
         onVote={handleVote}
         onSkip={handleSkip}

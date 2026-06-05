@@ -1,5 +1,6 @@
 import type { Company, Vote } from './types'
-import { VOTE_EMOJI, VOTES, AI_LAYER_SHORT, toTitleCase, stars, Fact } from './display-utils'
+import { VOTE_EMOJI, VOTES, AI_LAYER_SHORT, toTitleCase, stars } from './display-utils'
+import { Fact } from './Fact'
 
 export function CompanyDetailPane({
   company,
