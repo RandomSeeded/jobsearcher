@@ -22,6 +22,7 @@ export function DiscoverQueuePane() {
 
   const isRunning = runs.some(r => r.status === 'running')
   const runningRun = runs.find(r => r.status === 'running')
+  const runningRunId = runningRun?.id
   const displayLog = runningRun ? liveLog : ''
 
   useEffect(() => {
@@ -40,13 +41,12 @@ export function DiscoverQueuePane() {
 
   useEffect(() => {
     if (logIntervalRef.current) clearInterval(logIntervalRef.current)
-    if (!runningRun) return
-    const poll = () => fetchRunLog(runningRun.id).then(setLiveLog).catch(() => {})
+    if (!runningRunId) return
+    const poll = () => fetchRunLog(runningRunId).then(setLiveLog).catch(() => {})
     poll()
     logIntervalRef.current = setInterval(poll, 2000)
     return () => { if (logIntervalRef.current) clearInterval(logIntervalRef.current) }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [runningRun?.id])
+  }, [runningRunId])
 
   useEffect(() => {
     if (logEndRef.current) logEndRef.current.scrollIntoView({ behavior: 'smooth' })
