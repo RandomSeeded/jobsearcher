@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { fetchCompanies, patchCompany } from './api'
 import { stars } from './display-utils'
@@ -145,12 +145,19 @@ export function Triage() {
       setQueue(nyr)
       if (nyr.length > 0) setSelected(nyr[0])
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [searchParams])
 
   const remaining = useMemo(() => queue.filter(c => !c.vote).length, [queue])
 
-  async function handleVote(vote: Vote) {
+  const advanceToNextNYR = useCallback((justActedOn: string) => {
+    setQueue(currentQueue => {
+      const nextNYR = currentQueue.find(c => c.company !== justActedOn && !c.vote)
+      if (nextNYR) setSelected(nextNYR)
+      return currentQueue
+    })
+  }, [])
+
+  const handleVote = useCallback(async (vote: Vote) => {
     if (!selected || votingRef.current) return
     votingRef.current = true
     const wasNYR = !selected.vote
@@ -166,23 +173,15 @@ export function Triage() {
     } finally {
       votingRef.current = false
     }
-  }
+  }, [selected, advanceToNextNYR])
 
-  async function handleSkip() {
+  const handleSkip = useCallback(async () => {
     if (!selected || selected.vote) return
     const updated = await patchCompany(selected.company, { vote: 'not_sure_yet' })
     setSessionTotal(n => n + 1)
     setQueue(q => q.map(c => c.company === updated.company ? updated : c))
     advanceToNextNYR(updated.company)
-  }
-
-  function advanceToNextNYR(justActedOn: string) {
-    setQueue(currentQueue => {
-      const nextNYR = currentQueue.find(c => c.company !== justActedOn && !c.vote)
-      if (nextNYR) setSelected(nextNYR)
-      return currentQueue
-    })
-  }
+  }, [selected, advanceToNextNYR])
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -193,8 +192,7 @@ export function Triage() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected])
+  }, [selected, handleVote, handleSkip])
 
   const isDone = remaining === 0 && sessionTotal > 0
 
