@@ -5,7 +5,8 @@ import type { Preferences } from './api'
 import { CompanyDetailPane } from './CompanyDetailPane'
 import { CommandPalette } from './CommandPalette'
 import { DiscoverQueuePane } from './DiscoverQueuePane'
-import { VOTE_EMOJI, toTitleCase, stars, AI_LAYER_SHORT, Fact } from './display-utils'
+import { VOTE_EMOJI, toTitleCase, stars, AI_LAYER_SHORT } from './display-utils'
+import { Fact } from './Fact'
 import type { Company, Vote } from './types'
 
 export function Dashboard() {
