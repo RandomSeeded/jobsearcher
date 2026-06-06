@@ -1,6 +1,6 @@
 import { Routes, Route } from 'react-router-dom'
-import { Dashboard } from './Dashboard'
-import { Triage } from './Triage'
+import { Dashboard } from './Dashboard/Dashboard'
+import { Triage } from './Triage/Triage'
 
 export default function App() {
   return (
