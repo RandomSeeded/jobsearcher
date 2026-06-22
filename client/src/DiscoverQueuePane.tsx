@@ -140,7 +140,7 @@ export function DiscoverQueuePane() {
           <div style={{ padding: '1rem', color: '#9ca3af' }}>Queue empty</div>
         )}
         {[...runs].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 10).map(run => (
-          <div key={run.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
+          <div key={run.id} style={{ borderBottom: '1px solid #d1d5db' }}>
             <div style={{ padding: '10px 12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
                 <span style={{ color: STATUS_COLOR[run.status], fontWeight: 600, fontSize: 11, textTransform: 'uppercase' }}>
