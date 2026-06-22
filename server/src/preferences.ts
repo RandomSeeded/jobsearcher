@@ -76,13 +76,16 @@ export function preferencesRouter(dataDir: string) {
     const out = fs.openSync(logFile, 'a')
     res.status(202).json({ distilling: true, logFile })
 
+    // Run from the repo root, not the server's cwd, so the skill's relative
+    // data/ paths resolve to the real data dir (not server/data/).
+    const repoRoot = path.resolve(dataDir, '..', '..')
     const proc = spawn('claude', [
       '-p', '/distill-preferences',
       '--model', 'claude-sonnet-4-6',
       '--allowedTools', 'Bash,Read,Write',
       '--max-turns', '20',
       '--strict-mcp-config',
-    ], { cwd: process.cwd(), stdio: ['ignore', out, out] })
+    ], { cwd: repoRoot, stdio: ['ignore', out, out] })
 
     proc.on('close', (code) => {
       distilling = false

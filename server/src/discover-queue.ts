@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { spawn } from 'child_process'
 import { readFileSync, writeFileSync, existsSync, createWriteStream, mkdirSync, readdirSync } from 'fs'
-import { join } from 'path'
+import { join, resolve } from 'path'
 import { randomUUID } from 'crypto'
 import yaml from 'js-yaml'
 
@@ -99,6 +99,9 @@ function executeRun(run: DiscoverRun, dataDir: string) {
   log.write(`[${new Date().toISOString()}] starting run ${run.id}\nprompt: ${promptArg}\nmodel: ${model}\n\n`)
 
   const maxTurns = run.count * 40  // ~40 turns per agent (8 searches + overhead)
+  // Run from the repo root, not the server's cwd: the skill writes relative
+  // data/ paths, and process.cwd() (server/) would strand files in server/data/.
+  const repoRoot = resolve(dataDir, '..', '..')
   const proc = spawn('claude', [
     '-p', `/discover-jobs ${promptArg}`,
     '--model', model,
@@ -108,7 +111,7 @@ function executeRun(run: DiscoverRun, dataDir: string) {
     '--output-format', 'json',
     '--strict-mcp-config',  // no MCP servers — reduces system prompt size ~30-40%
   ], {
-    cwd: process.cwd(),
+    cwd: repoRoot,
     stdio: ['ignore', 'pipe', 'pipe'],
     env: { ...process.env, CLAUDE_CODE_SUBAGENT_MODEL: model },
   })
