@@ -44,25 +44,37 @@ function resetManifest(dataDir: string) {
   writeFileSync(manifestPath(dataDir), JSON.stringify({ promoted: [] }))
 }
 
+// Resolve a manifest to the companies that are *actually* present and surfaceable.
+// An agent can return a slug it never finished promoting (the YAML stays in its
+// working dir, never moved to opportunities). Trusting the manifest blindly makes
+// the run report more companies than triage can show ("found 3, surfaced 2"). So
+// only count slugs whose opportunity file exists, and resolve each display name
+// the same way the API does (company → name → slug) to stay consistent with triage.
 function readManifest(dataDir: string): { slugs: string[]; names: string[] } {
   const p = manifestPath(dataDir)
   if (!existsSync(p)) return { slugs: [], names: [] }
   try {
     const { promoted } = JSON.parse(readFileSync(p, 'utf8')) as { promoted?: string[] }
-    const slugs = promoted ?? []
-    const names = slugs.map(slug => {
+    const slugs: string[] = []
+    const names: string[] = []
+    for (const slug of promoted ?? []) {
+      const file = join(dataDir, `${slug}.yaml`)
+      if (!existsSync(file)) continue  // claimed promoted but never landed — skip
+      let name = slug
       try {
-        const doc = yaml.load(readFileSync(join(dataDir, `${slug}.yaml`), 'utf8')) as { company?: string }
-        return doc?.company ?? slug
-      } catch {
-        return slug
-      }
-    })
+        const doc = yaml.load(readFileSync(file, 'utf8')) as { company?: string; name?: string }
+        name = doc?.company || doc?.name || slug
+      } catch { /* unreadable — fall back to slug, but the file does exist */ }
+      slugs.push(slug)
+      names.push(name)
+    }
     return { slugs, names }
   } catch {
     return { slugs: [], names: [] }
   }
 }
+
+export const _readManifest = readManifest  // exported for tests
 
 function logPath(dataDir: string, id: string) {
   const logsDir = join(dataDir, '..', '..', 'logs')
