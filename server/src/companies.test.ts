@@ -46,3 +46,28 @@ describe('PATCH /api/companies/:name', () => {
     expect(res.status).toBe(404)
   })
 })
+
+describe('malformed agent YAML (missing company field)', () => {
+  beforeAll(() => {
+    // An agent that wrote `name:` instead of the canonical `company:` field.
+    fs.writeFileSync(
+      path.join(tmpDir, 'rogue-co.yaml'),
+      'name: Rogue Co\nurl: https://rogue.example\nsummary: did not follow the schema\n',
+    )
+  })
+
+  it('still lists the company, deriving the name from `name`', async () => {
+    const app = buildApp(tmpDir)
+    const res = await request(app).get('/api/companies')
+    expect(res.status).toBe(200)
+    expect(res.body.every((c: { company: unknown }) => typeof c.company === 'string')).toBe(true)
+    expect(res.body.some((c: { company: string }) => c.company === 'Rogue Co')).toBe(true)
+  })
+
+  it('does not break voting on other companies', async () => {
+    const app = buildApp(tmpDir)
+    const res = await request(app).patch('/api/companies/ambrook').send({ vote: 'like' })
+    expect(res.status).toBe(200)
+    expect(res.body.company).toBe('Ambrook')
+  })
+})
