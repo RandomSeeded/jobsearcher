@@ -40,6 +40,10 @@ function manifestPath(dataDir: string) {
   return join(dataDir, '..', 'discover-manifest.json')
 }
 
+function resetManifest(dataDir: string) {
+  writeFileSync(manifestPath(dataDir), JSON.stringify({ promoted: [] }))
+}
+
 function readManifest(dataDir: string): { slugs: string[]; names: string[] } {
   const p = manifestPath(dataDir)
   if (!existsSync(p)) return { slugs: [], names: [] }
@@ -85,6 +89,10 @@ function executeRun(run: DiscoverRun, dataDir: string) {
   entry.run_at = new Date().toISOString()
   entry.log_path = logPath(dataDir, run.id)
   saveQueue(dataDir, queue)
+
+  // Clear the manifest so this run only ever reports its own promotions.
+  // The skill overwrites it on success; a failed run leaves it empty.
+  resetManifest(dataDir)
 
   const promptArg = buildPromptArg(run)
   const log = createWriteStream(logPath(dataDir, run.id), { flags: 'a' })
@@ -137,13 +145,19 @@ function executeRun(run: DiscoverRun, dataDir: string) {
     const e = q.find(r => r.id === run.id)
     if (e) {
       e.status = code === 0 ? 'done' : 'failed'
-      const { slugs, names } = readManifest(dataDir)
-      if (slugs.length > 0) {
-        e.discovered_companies = names
-        e.output_summary = `${slugs.length} new ${slugs.length === 1 ? 'company' : 'companies'}: ${slugs.join(', ')}`
-      } else {
+      if (code !== 0) {
+        // A failed run discovered nothing — never attribute manifest contents to it.
         e.discovered_companies = []
-        e.output_summary = 'No new companies added'
+        e.output_summary = 'Run failed'
+      } else {
+        const { slugs, names } = readManifest(dataDir)
+        if (slugs.length > 0) {
+          e.discovered_companies = names
+          e.output_summary = `${slugs.length} new ${slugs.length === 1 ? 'company' : 'companies'}: ${slugs.join(', ')}`
+        } else {
+          e.discovered_companies = []
+          e.output_summary = 'No new companies added'
+        }
       }
       saveQueue(dataDir, q)
     }
