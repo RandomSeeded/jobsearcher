@@ -5,6 +5,15 @@ import path from 'path'
 
 let distilling = false
 
+type DistillRun = {
+  startedAt: string
+  finishedAt: string | null
+  exitCode: number | null
+  error: string | null
+  logFile: string
+}
+let lastRun: DistillRun | null = null
+
 type PreferenceItem = { short: string; text: string; confidence: number }
 type Preferences = { likes: PreferenceItem[]; dislikes: PreferenceItem[]; generatedAt: string | null }
 
@@ -45,19 +54,27 @@ function parse(md: string): Preferences {
 export function preferencesRouter(dataDir: string) {
   const router = Router()
   const prefsPath = path.join(dataDir, '..', 'preferences.md')
+  const logsDir = path.join(dataDir, '..', '..', 'logs')
 
   router.get('/', (_req, res) => {
     if (!fs.existsSync(prefsPath)) {
       return res.status(404).json({ error: 'preferences.md not found' })
     }
     const md = fs.readFileSync(prefsPath, 'utf8')
-    res.json({ ...parse(md), distilling })
+    res.json({ ...parse(md), distilling, lastRun })
   })
 
   router.post('/distill', (_req, res) => {
     if (distilling) return res.status(409).json({ error: 'already running' })
     distilling = true
-    res.status(202).json({ distilling: true })
+
+    fs.mkdirSync(logsDir, { recursive: true })
+    const startedAt = new Date().toISOString()
+    const logFile = path.join(logsDir, `distill-${startedAt.replace(/[:.]/g, '-')}.log`)
+    lastRun = { startedAt, finishedAt: null, exitCode: null, error: null, logFile }
+
+    const out = fs.openSync(logFile, 'a')
+    res.status(202).json({ distilling: true, logFile })
 
     const proc = spawn('claude', [
       '-p', '/distill-preferences',
@@ -65,10 +82,24 @@ export function preferencesRouter(dataDir: string) {
       '--allowedTools', 'Bash,Read,Write',
       '--max-turns', '20',
       '--strict-mcp-config',
-    ], { cwd: process.cwd(), stdio: 'ignore' })
+    ], { cwd: process.cwd(), stdio: ['ignore', out, out] })
 
-    proc.on('close', () => { distilling = false })
-    proc.on('error', () => { distilling = false })
+    proc.on('close', (code) => {
+      distilling = false
+      try { fs.closeSync(out) } catch { /* already closed */ }
+      if (lastRun) {
+        lastRun.finishedAt = new Date().toISOString()
+        lastRun.exitCode = code
+      }
+    })
+    proc.on('error', (err) => {
+      distilling = false
+      try { fs.closeSync(out) } catch { /* already closed */ }
+      if (lastRun) {
+        lastRun.finishedAt = new Date().toISOString()
+        lastRun.error = err.message
+      }
+    })
   })
 
   return router
