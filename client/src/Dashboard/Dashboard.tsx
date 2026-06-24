@@ -62,6 +62,12 @@ export function Dashboard() {
     setSelected(updated)
   }
 
+  async function handleStageChange(company: Company, stage: string | null) {
+    const updated = await patchCompany(company.company, { stage })
+    setCompanies(cs => cs.map(c => c.company === updated.company ? updated : c))
+    setSelected(updated)
+  }
+
   async function handleFindMore(company: Company) {
     const prompt = `find more companies like ${company.company} — ${company.ai_category ?? 'AI'}, ~${company.employees ?? 'unknown'} employees, ${company.location ?? 'any location'}`
     await enqueueRun(prompt, 5)
@@ -117,6 +123,7 @@ export function Dashboard() {
           <CompanyDetailPane
             company={selected}
             onVote={v => handleVote(selected, v)}
+            onStageChange={s => handleStageChange(selected, s)}
             onClose={() => setSelected(null)}
             onFindMore={handleFindMore}
           />

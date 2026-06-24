@@ -4,7 +4,7 @@ export interface Company {
   company: string
   terse?: string
   vote?: Vote
-  stage?: string
+  stage?: string // application pipeline status (Outreach … OFFER, Rejected …); see CONTEXT.md
   location?: string
   employees?: string
   fundraising?: string

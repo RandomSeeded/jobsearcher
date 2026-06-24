@@ -1,15 +1,17 @@
 import type { Company, Vote } from './types'
-import { VOTE_EMOJI, VOTES, AI_LAYER_SHORT, toTitleCase, stars } from './display-utils'
+import { VOTE_EMOJI, VOTES, AI_LAYER_SHORT, stars, STAGES, stageAccent } from './display-utils'
 import { Fact } from './Fact'
 
 export function CompanyDetailPane({
   company,
   onVote,
+  onStageChange,
   onClose,
   onFindMore,
 }: {
   company: Company
   onVote: (v: Vote) => void
+  onStageChange: (stage: string | null) => void
   onClose: () => void
   onFindMore: (c: Company) => void
 }) {
@@ -40,13 +42,28 @@ export function CompanyDetailPane({
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 16px', marginBottom: '1.25rem' }}>
           <Fact label="Location" value={company.location ?? '—'} dim={!company.location} />
           <Fact label="Employees" value={company.employees ?? '—'} dim={!company.employees} />
-          <Fact label="Stage" value={company.stage ? toTitleCase(company.stage) : '—'} dim={!company.stage} />
           <Fact label="Funding" value={company.fundraising ?? '—'} dim={!company.fundraising} />
           <Fact label="Quality" value={stars(company.company_quality) ?? '—'} dim={!company.company_quality} />
           {company.ai_category && company.ai_category !== 'none' && (
             <Fact label="AI layer" value={AI_LAYER_SHORT[company.ai_category] ?? company.ai_category} />
           )}
         </div>
+
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '1.25rem' }}>
+          <span style={{ fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Stage</span>
+          <span style={{ width: 8, height: 8, borderRadius: 999, background: stageAccent(company.stage), flexShrink: 0 }} />
+          <select
+            value={company.stage ?? ''}
+            onChange={e => onStageChange(e.target.value || null)}
+            style={{
+              flex: 1, fontSize: 13, padding: '5px 8px', borderRadius: 8,
+              border: '1px solid #d1d5db', background: '#fff', color: company.stage ? '#111827' : '#9ca3af', cursor: 'pointer',
+            }}
+          >
+            <option value="">— none —</option>
+            {STAGES.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </label>
 
         <hr style={{ border: 'none', borderTop: '1px solid #e5e7eb', margin: '0 0 1.25rem' }} />
 

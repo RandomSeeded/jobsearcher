@@ -1,16 +1,6 @@
 import { Fact } from '../Fact'
-import { VOTE_EMOJI, toTitleCase, stars, AI_LAYER_SHORT } from '../display-utils'
+import { VOTE_EMOJI, toTitleCase, stars, AI_LAYER_SHORT, stageAccent } from '../display-utils'
 import type { Company } from '../types'
-
-const OFFER_STAGES = new Set(['OFFER', 'Rejected Offer'])
-const REJECTION_STAGES = new Set(['Rejected me'])
-
-function stageAccent(stage?: string): string {
-  if (!stage) return '#e5e7eb'
-  if (OFFER_STAGES.has(stage)) return '#22c55e'
-  if (REJECTION_STAGES.has(stage)) return '#ef4444'
-  return '#e5e7eb'
-}
 
 export function CompanyGrid({ companies, onSelect }: { companies: Company[]; onSelect: (c: Company) => void }) {
   return (

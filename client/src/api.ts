@@ -20,7 +20,7 @@ export async function fetchCompanies(): Promise<Company[]> {
   return res.json()
 }
 
-export async function patchCompany(name: string, patch: Partial<Company>): Promise<Company> {
+export async function patchCompany(name: string, patch: { [K in keyof Company]?: Company[K] | null }): Promise<Company> {
   const res = await fetch(`/api/companies/${name.toLowerCase()}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
