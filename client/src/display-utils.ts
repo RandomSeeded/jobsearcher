@@ -29,32 +29,38 @@ export const STAGES = [
 
 // Stages collapse into a few semantic groups. Each group has one colour, and
 // two of them ("successful" / "in_progress") double as the meta-filter options.
-export type StageGroup = 'successful' | 'in_progress' | 'on_hold' | 'rejected' | 'passed'
+export type StageGroup = 'successful' | 'in_progress' | 'outreach' | 'on_hold' | 'watch' | 'rejected' | 'passed'
 
 export const STAGE_GROUP_MEMBERS: Record<StageGroup, string[]> = {
   successful: ['OFFER', 'Rejected Offer'],                       // an offer was extended
-  in_progress: ['Outreach', 'Recruiter Call', 'Hiring Manager Interview',
-    'Technical Interview', 'System Design', 'Takehome', 'ONSITE'], // active pipeline
+  in_progress: ['Recruiter Call', 'Hiring Manager Interview',   // genuinely active —
+    'Technical Interview', 'System Design', 'Takehome', 'ONSITE'], // something scheduled
+  outreach: ['Outreach'],                                        // inbound, not yet talked to
   on_hold: ['On Hold'],                                          // paused
-  rejected: ['Rejected me', 'BLOCKED ME'],                       // they ended it
-  passed: ['Rejected them', 'BLOCKED THEM'],                     // you walked away
+  watch: ['BLOCKED ME', 'BLOCKED THEM'],                         // keep an eye on these
+  rejected: ['Rejected me'],                                     // they passed on me
+  passed: ['Rejected them'],                                     // I passed on them
 }
 
 export const STAGE_GROUP_LABEL: Record<StageGroup, string> = {
   successful: 'Successful',
   in_progress: 'In progress',
+  outreach: 'Outreach',
   on_hold: 'On hold',
+  watch: 'Blocked',
   rejected: 'Rejected',
   passed: 'Passed',
 }
 
-// First-pass palette — a few semantic colours, not one per stage.
+// Softened palette — muted tones, not vivid. One colour per semantic group.
 export const STAGE_GROUP_COLOR: Record<StageGroup, string> = {
-  successful: '#16a34a', // green
-  in_progress: '#2563eb', // blue
-  on_hold: '#d97706', // amber
-  rejected: '#dc2626', // red
-  passed: '#64748b', // slate
+  successful: '#6fae8a', // soft green
+  in_progress: '#7798d4', // soft blue — scheduled / active
+  outreach: '#b1b6bd', // light gray — untouched inbound
+  on_hold: '#cdad6e', // soft amber
+  watch: '#dd9e64', // soft orange — blocked, keep an eye on
+  rejected: '#db6b6b', // soft but clearly red
+  passed: '#94a0ad', // soft slate
 }
 
 const STAGE_TO_GROUP: Record<string, StageGroup> = Object.fromEntries(
