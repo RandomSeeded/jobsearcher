@@ -7,6 +7,8 @@ import { CommandPalette } from '../CommandPalette'
 import { DiscoverQueuePane } from '../DiscoverQueuePane'
 import type { Company, Vote } from '../types'
 import { CompanyGrid } from './CompanyGrid'
+import { SizeFilter } from './SizeFilter'
+import { matchesSizeFilter } from './sizeBuckets'
 
 export function Dashboard() {
   const [companies, setCompanies] = useState<Company[]>([])
@@ -14,6 +16,7 @@ export function Dashboard() {
   const [selected, setSelected] = useState<Company | null>(null)
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [query, setQuery] = useState('')
+  const [sizeKeys, setSizeKeys] = useState<Set<string>>(new Set())
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -64,9 +67,10 @@ export function Dashboard() {
     await enqueueRun(prompt, 5)
   }
 
-  const loved = companies.filter(c => c.vote === 'love' || c.vote === 'like')
-  const disliked = companies.filter(c => c.vote === 'dislike' || c.vote === 'neutral')
-  const uncategorized = companies.filter(c => !c.vote || c.vote === 'not_sure_yet')
+  const filtered = companies.filter(c => matchesSizeFilter(c, sizeKeys))
+  const loved = filtered.filter(c => c.vote === 'love' || c.vote === 'like')
+  const disliked = filtered.filter(c => c.vote === 'dislike' || c.vote === 'neutral')
+  const uncategorized = filtered.filter(c => !c.vote || c.vote === 'not_sure_yet')
 
 
   return (
@@ -80,6 +84,10 @@ export function Dashboard() {
           >
             Start triage →
           </button>
+        </div>
+
+        <div style={{ marginBottom: '1.25rem', paddingBottom: '1rem', borderBottom: '1px solid #f3f4f6' }}>
+          <SizeFilter companies={companies} active={sizeKeys} onChange={setSizeKeys} />
         </div>
 
         {loved.length > 0 && (
