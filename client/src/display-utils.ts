@@ -22,20 +22,21 @@ export function stars(n?: number) {
 // Application pipeline status (the `stage` field). The full vocabulary lives in
 // CONTEXT.md → "Stage". Funding rounds belong in `fundraising`, not here.
 export const STAGES = [
-  'Outreach', 'Recruiter Call', 'Hiring Manager Interview', 'Technical Interview',
+  'Outreach', 'Cold Apply', 'Recruiter Call', 'Hiring Manager Interview', 'Technical Interview',
   'System Design', 'Takehome', 'ONSITE', 'OFFER', 'Rejected Offer', 'Rejected me',
   'Rejected them', 'On Hold', 'BLOCKED ME', 'BLOCKED THEM',
 ] as const
 
 // Stages collapse into a few semantic groups. Each group has one colour, and
 // two of them ("successful" / "in_progress") double as the meta-filter options.
-export type StageGroup = 'successful' | 'in_progress' | 'outreach' | 'on_hold' | 'watch' | 'rejected' | 'passed'
+export type StageGroup = 'successful' | 'in_progress' | 'outreach' | 'cold_apply' | 'on_hold' | 'watch' | 'rejected' | 'passed'
 
 export const STAGE_GROUP_MEMBERS: Record<StageGroup, string[]> = {
   successful: ['OFFER', 'Rejected Offer'],                       // an offer was extended
   in_progress: ['Recruiter Call', 'Hiring Manager Interview',   // genuinely active —
     'Technical Interview', 'System Design', 'Takehome', 'ONSITE'], // something scheduled
   outreach: ['Outreach'],                                        // inbound, not yet talked to
+  cold_apply: ['Cold Apply'],                                    // I applied cold, no contact yet
   on_hold: ['On Hold'],                                          // paused
   watch: ['BLOCKED ME', 'BLOCKED THEM'],                         // keep an eye on these
   rejected: ['Rejected me'],                                     // they passed on me
@@ -46,6 +47,7 @@ export const STAGE_GROUP_LABEL: Record<StageGroup, string> = {
   successful: 'Successful',
   in_progress: 'In progress',
   outreach: 'Outreach',
+  cold_apply: 'Cold apply',
   on_hold: 'On hold',
   watch: 'Blocked',
   rejected: 'Rejected',
@@ -57,6 +59,7 @@ export const STAGE_GROUP_COLOR: Record<StageGroup, string> = {
   successful: '#6fae8a', // soft green
   in_progress: '#7798d4', // soft blue — scheduled / active
   outreach: '#b1b6bd', // light gray — untouched inbound
+  cold_apply: '#a78bc2', // soft mauve — outbound cold application
   on_hold: '#cdad6e', // soft amber
   watch: '#dd9e64', // soft orange — blocked, keep an eye on
   rejected: '#db6b6b', // soft but clearly red

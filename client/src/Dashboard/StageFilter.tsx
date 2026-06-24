@@ -7,16 +7,24 @@ import {
 
 // Meta-group filter keys are prefixed so they never collide with a stage name.
 const GROUP_PREFIX = 'g:'
-// Which groups are offered as meta-filters (in addition to precise stages).
-const META_GROUPS: StageGroup[] = ['successful', 'in_progress']
 
-// Active = set of stage names and/or group keys (`g:successful`). Empty = no filter.
+// Meta-filters offered in addition to precise stages. A meta-filter can span
+// several colour groups — "In progress" deliberately also matches Blocked, since
+// those are still live threads worth tracking (Blocked keeps its own orange).
+type MetaFilter = { key: string; label: string; color: string; groups: StageGroup[] }
+const META_FILTERS: MetaFilter[] = [
+  { key: 'successful', label: STAGE_GROUP_LABEL.successful, color: STAGE_GROUP_COLOR.successful, groups: ['successful'] },
+  { key: 'in_progress', label: STAGE_GROUP_LABEL.in_progress, color: STAGE_GROUP_COLOR.in_progress, groups: ['in_progress', 'watch'] },
+]
+
+// Active = set of stage names and/or meta-filter keys (`g:successful`). Empty = no filter.
 export function matchesStageFilter(c: Company, active: Set<string>): boolean {
   if (active.size === 0) return true
   if (!c.stage) return false
   if (active.has(c.stage)) return true
   const g = stageGroup(c.stage)
-  return g ? active.has(GROUP_PREFIX + g) : false
+  if (!g) return false
+  return META_FILTERS.some(mf => active.has(GROUP_PREFIX + mf.key) && mf.groups.includes(g))
 }
 
 // Dropdown popover for filtering the Dashboard by stage (pipeline status).
@@ -47,7 +55,10 @@ export function StageFilter({
   }
 
   const stageCount = (s: string) => companies.filter(c => c.stage === s).length
-  const groupCount = (g: StageGroup) => companies.filter(c => stageGroup(c.stage) === g).length
+  const metaCount = (mf: MetaFilter) => {
+    const g = stageGroup
+    return companies.filter(c => { const grp = g(c.stage); return grp ? mf.groups.includes(grp) : false }).length
+  }
   // Only show precise stages that actually occur, in canonical order.
   const presentStages = STAGES.filter(s => stageCount(s) > 0)
 
@@ -81,17 +92,17 @@ export function StageFilter({
           boxShadow: '0 8px 24px rgba(0,0,0,.12)', padding: 6, minWidth: 220,
         }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.04em', padding: '4px 8px 2px' }}>Groups</div>
-          {META_GROUPS.map(g => {
-            const key = GROUP_PREFIX + g
+          {META_FILTERS.map(mf => {
+            const key = GROUP_PREFIX + mf.key
             return (
               <label key={key} style={row}
                 onMouseEnter={e => (e.currentTarget.style.background = '#f3f4f6')}
                 onMouseLeave={e => (e.currentTarget.style.background = '')}
               >
                 <input type="checkbox" checked={active.has(key)} onChange={() => toggle(key)} style={{ accentColor: '#2563eb' }} />
-                {dot(STAGE_GROUP_COLOR[g])}
-                <span style={{ flex: 1, fontWeight: 600 }}>{STAGE_GROUP_LABEL[g]}</span>
-                <span style={{ color: '#9ca3af', fontSize: 12 }}>{groupCount(g)}</span>
+                {dot(mf.color)}
+                <span style={{ flex: 1, fontWeight: 600 }}>{mf.label}</span>
+                <span style={{ color: '#9ca3af', fontSize: 12 }}>{metaCount(mf)}</span>
               </label>
             )
           })}
