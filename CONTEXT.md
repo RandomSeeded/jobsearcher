@@ -34,7 +34,7 @@ The act of moving a company from `/data/run/{run-id}/{agent-id}/` to `/data/oppo
 One invocation of the discover-jobs skill. Produces N [[Opportunity|Opportunities]] via N parallel agents. All agent working directories live under `/data/run/{run-uuid}/`. Each agent subdirectory is named `{type}-{N}` (e.g., `preference-1`, `explore-1`).
 
 ## Discovery Agent
-A haiku-model subagent responsible for finding exactly one [[Opportunity]] per run. Two types: [[Preference-Based Agent]] and [[Exploratory Agent]].
+A sonnet-model subagent responsible for finding exactly one [[Opportunity]] per run. Two types: [[Preference-Based Agent]] and [[Exploratory Agent]].
 
 ## Claim
 An empty marker directory `/data/run/{run-uuid}/claims/{slug}/` a [[Discovery Agent]] atomically creates (`mkdir`) the instant it accepts a candidate, before backfilling. Because `mkdir` is atomic, exactly one agent wins a contested slug when agents run in parallel — this is what prevents two agents promoting the same company. Slugs are produced by an aggressive deterministic slugify so the same company name always yields the same claim.

@@ -89,7 +89,7 @@ function buildPromptArg(run: DiscoverRun): string {
 let activeRunId: string | null = null
 
 function executeRun(run: DiscoverRun, dataDir: string) {
-  const model = run.model ?? 'claude-haiku-4-5-20251001'
+  const model = run.model ?? 'claude-sonnet-4-6'
   if (activeRunId) return
   activeRunId = run.id
 
@@ -188,7 +188,7 @@ export function discoverQueueRouter(dataDir: string) {
   })
 
   router.post('/', (req, res) => {
-    const { prompt, count = 5, model = 'claude-haiku-4-5-20251001' } = req.body as { prompt?: string; count?: number; model?: string }
+    const { prompt, count = 5, model = 'claude-sonnet-4-6' } = req.body as { prompt?: string; count?: number; model?: string }
     const run: DiscoverRun = {
       id: randomUUID(),
       prompt: prompt || undefined,

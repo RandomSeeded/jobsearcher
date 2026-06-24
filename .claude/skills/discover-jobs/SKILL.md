@@ -70,7 +70,7 @@ honest actual.
 
 ### 5. Spawn all agents in **one parallel wave**
 
-Issue **all `count` Agent tool calls together in a single message** (`model: "haiku"`)
+Issue **all `count` Agent tool calls together in a single message** (`model: "sonnet"`)
 and wait for the whole batch to return. Do **not** run them one at a time.
 
 Parallel agents would otherwise race to the same company, so dedup is enforced on
