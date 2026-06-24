@@ -27,15 +27,49 @@ export const STAGES = [
   'Rejected them', 'On Hold', 'BLOCKED ME', 'BLOCKED THEM',
 ] as const
 
-// Green = an offer was extended (company accepted you); red = company rejected you.
-// "Rejected them" (you passed) and in-process stages stay neutral.
-const GREEN_STAGES = new Set(['OFFER', 'Rejected Offer'])
-const RED_STAGES = new Set(['Rejected me'])
+// Stages collapse into a few semantic groups. Each group has one colour, and
+// two of them ("successful" / "in_progress") double as the meta-filter options.
+export type StageGroup = 'successful' | 'in_progress' | 'on_hold' | 'rejected' | 'passed'
 
-export function stageAccent(stage?: string): string {
-  if (stage && GREEN_STAGES.has(stage)) return '#22c55e'
-  if (stage && RED_STAGES.has(stage)) return '#ef4444'
-  return '#e5e7eb'
+export const STAGE_GROUP_MEMBERS: Record<StageGroup, string[]> = {
+  successful: ['OFFER', 'Rejected Offer'],                       // an offer was extended
+  in_progress: ['Outreach', 'Recruiter Call', 'Hiring Manager Interview',
+    'Technical Interview', 'System Design', 'Takehome', 'ONSITE'], // active pipeline
+  on_hold: ['On Hold'],                                          // paused
+  rejected: ['Rejected me', 'BLOCKED ME'],                       // they ended it
+  passed: ['Rejected them', 'BLOCKED THEM'],                     // you walked away
+}
+
+export const STAGE_GROUP_LABEL: Record<StageGroup, string> = {
+  successful: 'Successful',
+  in_progress: 'In progress',
+  on_hold: 'On hold',
+  rejected: 'Rejected',
+  passed: 'Passed',
+}
+
+// First-pass palette — a few semantic colours, not one per stage.
+export const STAGE_GROUP_COLOR: Record<StageGroup, string> = {
+  successful: '#16a34a', // green
+  in_progress: '#2563eb', // blue
+  on_hold: '#d97706', // amber
+  rejected: '#dc2626', // red
+  passed: '#64748b', // slate
+}
+
+const STAGE_TO_GROUP: Record<string, StageGroup> = Object.fromEntries(
+  (Object.entries(STAGE_GROUP_MEMBERS) as [StageGroup, string[]][])
+    .flatMap(([g, members]) => members.map(m => [m, g] as const)),
+)
+
+export function stageGroup(stage?: string): StageGroup | undefined {
+  return stage ? STAGE_TO_GROUP[stage] : undefined
+}
+
+const NEUTRAL_STAGE = '#e5e7eb'
+export function stageColor(stage?: string): string {
+  const g = stageGroup(stage)
+  return g ? STAGE_GROUP_COLOR[g] : NEUTRAL_STAGE
 }
 
 export const AI_LAYER_SHORT: Record<string, string> = {

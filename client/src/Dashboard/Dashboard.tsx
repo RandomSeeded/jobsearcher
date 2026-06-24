@@ -9,6 +9,7 @@ import type { Company, Vote } from '../types'
 import { CompanyGrid } from './CompanyGrid'
 import { SizeFilter } from './SizeFilter'
 import { matchesSizeFilter } from './sizeBuckets'
+import { StageFilter, matchesStageFilter } from './StageFilter'
 
 export function Dashboard() {
   const [companies, setCompanies] = useState<Company[]>([])
@@ -17,6 +18,7 @@ export function Dashboard() {
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [sizeKeys, setSizeKeys] = useState<Set<string>>(new Set())
+  const [stageKeys, setStageKeys] = useState<Set<string>>(new Set())
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -73,7 +75,7 @@ export function Dashboard() {
     await enqueueRun(prompt, 5)
   }
 
-  const filtered = companies.filter(c => matchesSizeFilter(c, sizeKeys))
+  const filtered = companies.filter(c => matchesSizeFilter(c, sizeKeys) && matchesStageFilter(c, stageKeys))
   const loved = filtered.filter(c => c.vote === 'love' || c.vote === 'like')
   const disliked = filtered.filter(c => c.vote === 'dislike' || c.vote === 'neutral')
   const uncategorized = filtered.filter(c => !c.vote || c.vote === 'not_sure_yet')
@@ -92,8 +94,9 @@ export function Dashboard() {
           </button>
         </div>
 
-        <div style={{ marginBottom: '1.25rem', paddingBottom: '1rem', borderBottom: '1px solid #f3f4f6' }}>
+        <div style={{ marginBottom: '1.25rem', paddingBottom: '1rem', borderBottom: '1px solid #f3f4f6', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <SizeFilter companies={companies} active={sizeKeys} onChange={setSizeKeys} />
+          <StageFilter companies={companies} active={stageKeys} onChange={setStageKeys} />
         </div>
 
         {loved.length > 0 && (

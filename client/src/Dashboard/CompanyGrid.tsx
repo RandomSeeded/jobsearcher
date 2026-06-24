@@ -1,5 +1,5 @@
 import { Fact } from '../Fact'
-import { VOTE_EMOJI, toTitleCase, stars, AI_LAYER_SHORT, stageAccent } from '../display-utils'
+import { VOTE_EMOJI, toTitleCase, stars, AI_LAYER_SHORT, stageColor } from '../display-utils'
 import type { Company } from '../types'
 
 export function CompanyGrid({ companies, onSelect }: { companies: Company[]; onSelect: (c: Company) => void }) {
@@ -11,7 +11,7 @@ export function CompanyGrid({ companies, onSelect }: { companies: Company[]; onS
       marginBottom: '2rem',
     }}>
       {companies.map(c => {
-        const accent = stageAccent(c.stage)
+        const accent = stageColor(c.stage)
         const aiShort = c.ai_category && c.ai_category !== 'none' ? (AI_LAYER_SHORT[c.ai_category] ?? c.ai_category) : null
         const qualityStr = c.company_quality ? stars(c.company_quality)! : null
         return (
@@ -47,7 +47,7 @@ export function CompanyGrid({ companies, onSelect }: { companies: Company[]; onS
                 <Fact label="Quality" value={qualityStr ?? '--'} dim={!qualityStr} />
               </div>
             </div>
-            <div style={{ marginTop: 'auto', borderTop: '1px solid #f3f4f6', padding: '6px 0', textAlign: 'center', fontSize: 11, color: '#9ca3af' }}>
+            <div style={{ marginTop: 'auto', borderTop: '1px solid #f3f4f6', padding: '6px 0', textAlign: 'center', fontSize: 11, fontWeight: c.stage ? 600 : 400, color: c.stage ? accent : '#9ca3af' }}>
               {c.stage ? toTitleCase(c.stage) : '—'}
             </div>
           </button>

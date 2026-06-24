@@ -1,5 +1,5 @@
 import type { Company, Vote } from './types'
-import { VOTE_EMOJI, VOTES, AI_LAYER_SHORT, stars, STAGES, stageAccent } from './display-utils'
+import { VOTE_EMOJI, VOTES, AI_LAYER_SHORT, stars, STAGES, stageColor } from './display-utils'
 import { Fact } from './Fact'
 
 export function CompanyDetailPane({
@@ -51,7 +51,7 @@ export function CompanyDetailPane({
 
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '1.25rem' }}>
           <span style={{ fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Stage</span>
-          <span style={{ width: 8, height: 8, borderRadius: 999, background: stageAccent(company.stage), flexShrink: 0 }} />
+          <span style={{ width: 8, height: 8, borderRadius: 999, background: stageColor(company.stage), flexShrink: 0 }} />
           <select
             value={company.stage ?? ''}
             onChange={e => onStageChange(e.target.value || null)}
