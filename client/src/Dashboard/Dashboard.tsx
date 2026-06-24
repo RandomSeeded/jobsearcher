@@ -86,12 +86,20 @@ export function Dashboard() {
       <div style={{ flex: 1, overflow: 'auto', padding: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '1rem' }}>
           <h1 style={{ marginTop: 0, marginBottom: 0 }}>Job Search</h1>
-          <button
-            onClick={() => navigate('/triage')}
-            className="text-blue-600 hover:text-blue-800 text-sm cursor-pointer bg-transparent border-0 p-0"
-          >
-            Start triage →
-          </button>
+          <div style={{ display: 'flex', gap: 16 }}>
+            <button
+              onClick={() => navigate('/kanban')}
+              className="text-blue-600 hover:text-blue-800 text-sm cursor-pointer bg-transparent border-0 p-0"
+            >
+              Pipeline →
+            </button>
+            <button
+              onClick={() => navigate('/triage')}
+              className="text-blue-600 hover:text-blue-800 text-sm cursor-pointer bg-transparent border-0 p-0"
+            >
+              Start triage →
+            </button>
+          </div>
         </div>
 
         <div style={{ marginBottom: '1.25rem', paddingBottom: '1rem', borderBottom: '1px solid #f3f4f6', display: 'flex', gap: 8, flexWrap: 'wrap' }}>

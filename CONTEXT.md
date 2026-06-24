@@ -47,3 +47,13 @@ A [[Discovery Agent]] that surfaces companies from top-tier investor portfolios 
 
 ## Stage
 The current status of the user's job application process with a company. One of: `Outreach`, `Cold Apply`, `Recruiter Call`, `Hiring Manager Interview`, `Technical Interview`, `System Design`, `Takehome`, `ONSITE`, `OFFER`, `Rejected Offer`, `Rejected me`, `Rejected them`, `On Hold`, `BLOCKED ME`, `BLOCKED THEM`. Null means no active process. Editable from the company detail pane. `Outreach` = a company reached out and the user hasn't engaged; `Cold Apply` = the user applied cold with no contact yet. A company's funding round (e.g. "Series B") is NOT a stage — it belongs in [[Fundraising]]. Drives the card border colour: green when an offer was extended (`OFFER`, `Rejected Offer`), red when the company rejected you (`Rejected me`). The Stage filter's "In progress" group also includes the Blocked stages.
+
+## Phase
+A coarse grouping of [[Stage|Stages]] used for at-a-glance pipeline views. Every
+Stage belongs to exactly one Phase; a Phase may contain one or more Stages. The
+eight Phases: **Outreach** (`Outreach`), **Cold Apply** (`Cold Apply`),
+**In Progress** (`Recruiter Call`, `Hiring Manager Interview`, `Technical Interview`,
+`System Design`, `Takehome`, `ONSITE`), **On Hold** (`On Hold`), **Successful**
+(`OFFER`, `Rejected Offer`), **Blocked** (`BLOCKED ME`, `BLOCKED THEM`),
+**Rejected** (`Rejected me`), **Passed** (`Rejected them`). Phase is derived from
+Stage, never stored. It drives stage colours and the pipeline board's columns.

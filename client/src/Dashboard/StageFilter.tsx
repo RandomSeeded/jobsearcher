@@ -14,7 +14,7 @@ const GROUP_PREFIX = 'g:'
 type MetaFilter = { key: string; label: string; color: string; groups: StageGroup[] }
 const META_FILTERS: MetaFilter[] = [
   { key: 'successful', label: STAGE_GROUP_LABEL.successful, color: STAGE_GROUP_COLOR.successful, groups: ['successful'] },
-  { key: 'in_progress', label: STAGE_GROUP_LABEL.in_progress, color: STAGE_GROUP_COLOR.in_progress, groups: ['in_progress', 'watch'] },
+  { key: 'in_progress', label: STAGE_GROUP_LABEL.in_progress, color: STAGE_GROUP_COLOR.in_progress, groups: ['in_progress', 'blocked'] },
 ]
 
 // Active = set of stage names and/or meta-filter keys (`g:successful`). Empty = no filter.

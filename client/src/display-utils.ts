@@ -29,7 +29,7 @@ export const STAGES = [
 
 // Stages collapse into a few semantic groups. Each group has one colour, and
 // two of them ("successful" / "in_progress") double as the meta-filter options.
-export type StageGroup = 'successful' | 'in_progress' | 'outreach' | 'cold_apply' | 'on_hold' | 'watch' | 'rejected' | 'passed'
+export type StageGroup = 'successful' | 'in_progress' | 'outreach' | 'cold_apply' | 'on_hold' | 'blocked' | 'rejected' | 'passed'
 
 export const STAGE_GROUP_MEMBERS: Record<StageGroup, string[]> = {
   successful: ['OFFER', 'Rejected Offer'],                       // an offer was extended
@@ -38,7 +38,7 @@ export const STAGE_GROUP_MEMBERS: Record<StageGroup, string[]> = {
   outreach: ['Outreach'],                                        // inbound, not yet talked to
   cold_apply: ['Cold Apply'],                                    // I applied cold, no contact yet
   on_hold: ['On Hold'],                                          // paused
-  watch: ['BLOCKED ME', 'BLOCKED THEM'],                         // keep an eye on these
+  blocked: ['BLOCKED ME', 'BLOCKED THEM'],                       // keep an eye on these
   rejected: ['Rejected me'],                                     // they passed on me
   passed: ['Rejected them'],                                     // I passed on them
 }
@@ -49,7 +49,7 @@ export const STAGE_GROUP_LABEL: Record<StageGroup, string> = {
   outreach: 'Outreach',
   cold_apply: 'Cold apply',
   on_hold: 'On hold',
-  watch: 'Blocked',
+  blocked: 'Blocked',
   rejected: 'Rejected',
   passed: 'Passed',
 }
@@ -61,7 +61,7 @@ export const STAGE_GROUP_COLOR: Record<StageGroup, string> = {
   outreach: '#b1b6bd', // light gray — untouched inbound
   cold_apply: '#a78bc2', // soft mauve — outbound cold application
   on_hold: '#cdad6e', // soft amber
-  watch: '#dd9e64', // soft orange — blocked, keep an eye on
+  blocked: '#dd9e64', // soft orange — blocked, keep an eye on
   rejected: '#db6b6b', // soft but clearly red
   passed: '#94a0ad', // soft slate
 }
