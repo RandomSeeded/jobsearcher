@@ -1,5 +1,7 @@
 # 0003 — Sequential discovery agents
 
+> **Superseded by [0004](0004-parallel-discovery-with-filesystem-claims.md).** The accepted `~N× wall-clock` cost proved fatal in practice: serial runs hit the orchestrator's 30-minute hard timeout and were SIGTERM'd mid-flight, landing fewer than `count`. We reverted to parallel and adopted the atomic file-claim this ADR had rejected.
+
 Discovery agents run one at a time, not in parallel.
 
 **Decision:** The `discover-jobs` orchestrator runs each agent sequentially, looping until `count` new opportunities land in `/data/opportunities/` or a `2 × count` attempt cap is hit. The manifest is derived from a filesystem diff (opportunities added since a run-start snapshot), not from agent return values. Stranded but backfilled YAMLs are salvaged before counting.

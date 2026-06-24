@@ -49,7 +49,14 @@ mkdir -p "data/run/{run_id}/{agent_id}"
 
 ### 2. Search and evaluate
 
-For each search (up to `max_discovery_searches`), log the query, run WebSearch, then log all outcomes in one Bash call:
+`max_discovery_searches` (default 5) is a **soft target, not a hard stop**. Aim to
+claim a company within that many searches. If you cross it with nothing claimed, stop
+gold-plating — **relax your bar** (accept lower `company_quality`, looser matches) and
+keep going. Only give up at the **hard ceiling of `3 × max_discovery_searches`** searches.
+You are one slot in a parallel run; the run needs your slot filled, so returning empty
+is a last resort.
+
+For each search, log the query, run WebSearch, then log all outcomes in one Bash call:
 
 ```bash
 LOG="data/run/{run_id}/{agent_id}/run.log"
@@ -61,11 +68,31 @@ LOG="data/run/{run_id}/{agent_id}/run.log"
 ```
 
 Skip criteria (check in order):
-a. **Duplicate** — already in `/data/candidates/`, `/data/opportunities/`, or `/data/run/{run_id}/*/`
+a. **Duplicate** — already in `/data/candidates/`, `/data/opportunities/`, or `/data/run/{run_id}/*/` (cheap pre-filter)
 b. **Negative signal match** — matches any negative preference signal
-c. **Accept** — passes all checks; stop searching
+c. **Accept** — passes all checks
 
-If `max_discovery_searches` exhausted:
+On **accept**, atomically claim the company *before* persisting or backfilling — other
+agents search the same space in parallel, and this claim is the only thing that stops
+two of them promoting the same company. Derive the slug with `slugify.sh` so every
+agent computes the identical slug for a given name:
+
+```bash
+LOG="data/run/{run_id}/{agent_id}/run.log"
+slug="$(scripts/slugify.sh "<company name>")"
+if scripts/claim.sh "data/run/{run_id}/claims" "$slug"; then
+  echo "[$(date -u +%FT%TZ)] [{run_id}/{agent_id}] claimed: $slug — proceeding" >> "$LOG"
+  # won the claim → continue to step 3 using this $slug everywhere downstream
+else
+  echo "[$(date -u +%FT%TZ)] [{run_id}/{agent_id}] skip claimed: $slug (another agent won it)" >> "$LOG"
+  # lost the claim → do NOT persist/backfill; keep searching for a different company
+fi
+```
+
+Use the `slug` from `slugify.sh` as the `SLUG` in every downstream step (persist,
+backfill, promote) so it matches the claim.
+
+If you reach the hard ceiling with nothing claimed (rare):
 ```bash
 echo "[$(date -u +%FT%TZ)] [{run_id}/{agent_id}] exhausted search budget — no candidate found" >> "$LOG"
 ```

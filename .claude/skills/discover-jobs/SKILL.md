@@ -5,13 +5,14 @@ description: Discovers new job opportunities by searching the web for companies 
 
 # discover-jobs
 
-Orchestrate discovery agents **sequentially** to find N new opportunities. Each agent finds exactly one company, backfills it, and promotes it to `/data/opportunities/`. Running serially (not in parallel) lets each agent dedup against what earlier agents already promoted, so no two agents pick the same company.
+Orchestrate discovery agents **in parallel** to find N new opportunities. Each agent finds exactly one company, backfills it, and promotes it to `/data/opportunities/`. Agents run concurrently in a single wave; they avoid picking the same company by **atomically claiming** it on the filesystem (`scripts/claim.sh`) before doing any expensive work — the first agent to claim a slug wins, the rest move on.
 
 ## Folder layout
 
 - `/data/opportunities/` — promoted companies ready for user voting
 - `/data/candidates/` — researched companies not selected as opportunities (bench)
 - `/data/run/{run_id}/{agent_id}/` — agent working directories (persist indefinitely for audit)
+- `/data/run/{run_id}/claims/{slug}/` — atomic claim markers; first agent to `mkdir` a slug owns it (empty dirs, kept for audit)
 
 ## Arguments
 
@@ -48,35 +49,36 @@ is the baseline used to compute what *this* run actually added:
 ls data/opportunities/*.yaml 2>/dev/null | xargs -n1 basename | sed 's/\.yaml$//' | sort > data/run/{run_id}/_baseline.txt
 ```
 
-### 4. Compute agent type order
+### 4. Compute the agent roster
 
 ```
 n_explore = floor(count / 3)
 n_pref    = count - n_explore
 ```
 
-Build an ordered list of agent **types** for the target `count` slots —
-`n_pref` preference agents followed by `n_explore` exploratory agents. Example:
-count=5 → `[preference, preference, preference, preference, explore]`.
+Build the roster of `count` agents up front: `n_pref` preference agents plus
+`n_explore` exploratory agents. Assign each a unique `agent_id`
+(`preference-1` … `preference-{n_pref}`, `explore-1` … `explore-{n_explore}`).
+Example: count=5 → `[preference-1, preference-2, preference-3, preference-4, explore-1]`.
 
-### 5. Run agents **sequentially** until `count` new opportunities land
+Each agent fills exactly one slot. There is **no top-up loop and no `2 × count`
+attempt cap** — every agent is mandated to surface one company (its discovery
+budget is a soft target, see the agent skills), so a single wave of `count`
+agents lands ≈ `count` opportunities. If an agent genuinely strikes out or is
+truncated mid-claim, the run lands `count − 1`; the manifest (step 7) reports the
+honest actual.
 
-Run agents **one at a time** — never in parallel. Each agent's duplicate check
-reads `/data/opportunities/`, so running serially means agent K automatically
-skips everything agents 1…K-1 already promoted. This is what prevents two agents
-picking the same company; do not parallelise.
+### 5. Spawn all agents in **one parallel wave**
 
-Loop:
+Issue **all `count` Agent tool calls together in a single message** (`model: "haiku"`)
+and wait for the whole batch to return. Do **not** run them one at a time.
 
-- Keep a running attempt counter, starting at 1.
-- **Stopping rule:** stop when the number of *new* opportunities (see step 6)
-  reaches `count`, OR when attempts reach `2 × count` (the credit cap) —
-  whichever comes first.
-- For each attempt: pick the agent type from the step-4 order (use the type at
-  index = current new-count; once past the list, default to `preference`).
-  Assign a unique `agent_id`: `preference-1`, `preference-2`, …, `explore-1`, …
-- Issue a **single** Agent tool call (`model: "haiku"`), wait for it to return,
-  then re-check the new-count before deciding whether to loop again.
+Parallel agents would otherwise race to the same company, so dedup is enforced on
+the filesystem: each agent computes a deterministic slug (`scripts/slugify.sh`) and
+atomically claims it (`scripts/claim.sh "data/run/{run_id}/claims" <slug>`) before
+persisting or backfilling. `mkdir` is atomic, so exactly one agent wins a contested
+slug; losers skip it and search again. You (the orchestrator) do not coordinate
+dedup — the claim directory does.
 
 Each agent prompt must be **fully self-contained** — agents start cold with no
 conversation history.
@@ -105,7 +107,7 @@ The manifest is built from what actually landed in `/data/opportunities/`, **not
 from what agents claim to return — an agent can find + backfill a company but get
 truncated before its promote step, leaving the YAML stranded in its working dir.
 
-After each agent returns (and once more at the end), salvage any stranded file:
+After the wave returns, salvage any stranded file:
 
 ```bash
 # Promote any backfilled-but-unpromoted YAML the agents left behind this run.

@@ -36,6 +36,9 @@ One invocation of the discover-jobs skill. Produces N [[Opportunity|Opportunitie
 ## Discovery Agent
 A haiku-model subagent responsible for finding exactly one [[Opportunity]] per run. Two types: [[Preference-Based Agent]] and [[Exploratory Agent]].
 
+## Claim
+An empty marker directory `/data/run/{run-uuid}/claims/{slug}/` a [[Discovery Agent]] atomically creates (`mkdir`) the instant it accepts a candidate, before backfilling. Because `mkdir` is atomic, exactly one agent wins a contested slug when agents run in parallel — this is what prevents two agents promoting the same company. Slugs are produced by an aggressive deterministic slugify so the same company name always yields the same claim.
+
 ## Preference-Based Agent
 A [[Discovery Agent]] that targets companies matching known positive signals in the [[Preference Profile]], weighted by confidence score, and avoids known negative signals. 2/3 of agents in a run are this type.
 
