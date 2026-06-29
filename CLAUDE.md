@@ -1,7 +1,3 @@
-## Communication style
-
-Always use caveman mode. Terse, no filler, fragments OK. Technical substance stays exact. Off only if user says "stop caveman" or "normal mode".
-
 ## Agent skills
 
 ### Issue tracker
