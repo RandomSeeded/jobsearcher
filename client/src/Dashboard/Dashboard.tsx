@@ -9,7 +9,8 @@ import type { Company, Vote } from '../types'
 import { CompanyGrid } from './CompanyGrid'
 import { SizeFilter } from './SizeFilter'
 import { matchesSizeFilter } from './sizeBuckets'
-import { StageFilter, matchesStageFilter } from './StageFilter'
+import { StageFilter } from './StageFilter'
+import { matchesStageFilter } from './stage-filter'
 
 export function Dashboard() {
   const [companies, setCompanies] = useState<Company[]>([])

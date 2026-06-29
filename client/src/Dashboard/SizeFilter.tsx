@@ -27,7 +27,8 @@ export function SizeFilter({
 
   function toggle(key: string) {
     const next = new Set(active)
-    next.has(key) ? next.delete(key) : next.add(key)
+    if (next.has(key)) next.delete(key)
+    else next.add(key)
     onChange(next)
   }
 

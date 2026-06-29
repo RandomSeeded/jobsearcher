@@ -3,8 +3,10 @@ import { Link } from 'react-router-dom'
 import { fetchCompanies, patchCompany, enqueueRun } from '../api'
 import type { Company, Vote } from '../types'
 import { CompanyDetailPane } from '../CompanyDetailPane'
-import { stars, AI_LAYER_SHORT, type StageGroup } from '../display-utils'
+import { type StageGroup } from '../display-utils'
 import { buildPipeline, DEFAULT_COLLAPSED_PHASES, PHASE_ORDER, reorderPhases, type Lane } from './pipeline'
+import { CollapsedColumn } from './CollapsedColumn'
+import { LaneView } from './LaneView'
 
 const COLLAPSE_KEY = 'kanban.collapsedPhases'
 const ORDER_KEY = 'kanban.phaseOrder'
@@ -31,9 +33,6 @@ function loadOrder(): StageGroup[] {
   return PHASE_ORDER
 }
 
-const aiShort = (c: Company) =>
-  c.ai_category && c.ai_category !== 'none' ? (AI_LAYER_SHORT[c.ai_category] ?? c.ai_category) : null
-
 export function Kanban() {
   const [companies, setCompanies] = useState<Company[]>([])
   const [selected, setSelected] = useState<Company | null>(null)
@@ -55,7 +54,7 @@ export function Kanban() {
   const inProcess = useMemo(() => columns.reduce((n, c) => n + phaseTotal(c.lanes), 0), [columns])
 
   function toggle(key: StageGroup) {
-    setCollapsed(prev => { const next = new Set(prev); next.has(key) ? next.delete(key) : next.add(key); return next })
+    setCollapsed(prev => { const next = new Set(prev); if (next.has(key)) next.delete(key); else next.add(key); return next })
   }
 
   // Column reorder (drag a phase header onto another column).
@@ -153,61 +152,6 @@ export function Kanban() {
           />
         </div>
       )}
-    </div>
-  )
-}
-
-function CollapsedColumn({ label, color, count, dropping, onExpand, onDragStart, onDragOver, onDragLeave, onDrop }: {
-  label: string; color: string; count: number; dropping: boolean; onExpand: () => void
-  onDragStart: (e: React.DragEvent) => void; onDragOver: (e: React.DragEvent) => void
-  onDragLeave: (e: React.DragEvent) => void; onDrop: (e: React.DragEvent) => void
-}) {
-  return (
-    <button onClick={onExpand} title={`Expand ${label} (drag to reorder)`}
-      draggable onDragStart={onDragStart} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
-      style={{ width: 36, flexShrink: 0, alignSelf: 'stretch', minHeight: 120, background: '#f9fafb', borderRadius: 10, border: 0, borderTop: `3px solid ${color}`, cursor: 'grab', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '8px 0', outline: dropping ? '2px dashed #94a3b8' : 'none', outlineOffset: 2 }}>
-      <span style={{ fontSize: 11, color: '#9ca3af' }}>{count}</span>
-      <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', fontSize: 12, fontWeight: 700, color: '#374151', whiteSpace: 'nowrap' }}>{label}</span>
-    </button>
-  )
-}
-
-function LaneView({ lane, color, multi, highlighted, onSelect, onDragOverLane, onDragLeaveLane, onDropLane }: {
-  lane: Lane; color: string; multi: boolean; highlighted: boolean
-  onSelect: (c: Company) => void
-  onDragOverLane: () => void; onDragLeaveLane: () => void; onDropLane: (company: string) => void
-}) {
-  return (
-    <div style={{ marginBottom: multi ? 10 : 0 }}>
-      {multi && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-          <span style={{ width: 6, height: 6, borderRadius: 999, background: color }} />
-          <span style={{ fontSize: 10, fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{lane.stage}</span>
-          <span style={{ fontSize: 10, color: '#cbd5e1' }}>{lane.companies.length || ''}</span>
-        </div>
-      )}
-      <div
-        onDragOver={e => { if (!e.dataTransfer.types.includes('text/company')) return; e.preventDefault(); onDragOverLane() }}
-        onDragLeave={onDragLeaveLane}
-        onDrop={e => onDropLane(e.dataTransfer.getData('text/company'))}
-        style={{ display: 'flex', flexDirection: 'column', gap: 6, minHeight: 28, borderRadius: 6, padding: 2, background: highlighted ? '#eef2ff' : 'transparent', outline: highlighted ? '1px dashed #a5b4fc' : 'none' }}
-      >
-        {lane.companies.length === 0 && <span style={{ color: '#d1d5db', fontSize: 11, padding: '4px 2px' }}>—</span>}
-        {lane.companies.map(c => (
-          <div key={c.company}
-            draggable
-            onDragStart={e => e.dataTransfer.setData('text/company', c.company)}
-            onClick={() => onSelect(c)}
-            style={{ background: '#fff', border: '1px solid #e5e7eb', borderLeft: `3px solid ${color}`, borderRadius: 6, padding: '6px 8px', fontSize: 12, cursor: 'pointer', boxShadow: '0 1px 2px rgba(0,0,0,.04)' }}
-          >
-            <div style={{ fontWeight: 600, color: '#111827' }}>{c.company}</div>
-            <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 2, fontSize: 10 }}>
-              {c.company_quality ? <span style={{ color: '#f59e0b' }}>{stars(c.company_quality)}</span> : null}
-              {aiShort(c) ? <span style={{ color: '#9ca3af' }}>{aiShort(c)}</span> : null}
-            </div>
-          </div>
-        ))}
-      </div>
     </div>
   )
 }
